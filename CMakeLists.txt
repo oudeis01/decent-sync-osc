@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.14)
+
+project(MotorControllerProject)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+include(FetchContent)
+
+FetchContent_Declare(
+  osc
+  GIT_REPOSITORY https://github.com/dimitry-ishenko-cpp/osc.git
+  GIT_TAG v1.3
+)
+FetchContent_MakeAvailable(osc)
+
+
+add_executable(MotorControllerProject main.cpp motor.cpp receiver.cpp)
+include_directories(${CMAKE_SOURCE_DIR})
+target_link_libraries(MotorControllerProject PRIVATE pthread osc++)
