@@ -58,7 +58,7 @@ void OSCReceiver::processMessage(const osc::message& msg) {
     if (msg.address() == "/motor/rotate" && msg.values().size() == 3) {
         MotorController::MotorCommand cmd;
         cmd.steps = msg.value(0).to_int32();
-        cmd.delay = msg.value(1).to_int32();
+        cmd.delay = msg.value(1).to_float();
         cmd.direction = msg.value(2).to_int32() > 0;
         
         motorController_.queueCommand(cmd);
