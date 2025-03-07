@@ -17,7 +17,7 @@ class MotorController {
 public:
     struct MotorCommand {
         int steps;
-        int delay;
+        float delay;
         bool direction;
     };
 

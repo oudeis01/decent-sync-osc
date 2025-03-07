@@ -46,9 +46,11 @@ void MotorController::moveMotor(int steps, float delay, bool direction) {
     digitalWrite(DIR_PIN, direction);
     for(int i=0; i<steps; ++i){
         digitalWrite(STEP_PIN, HIGH);
-        std::this_thread::sleep_for(std::chrono::microseconds(int(delay)));
+        std::this_thread::sleep_for(std::chrono::microseconds(
+            static_cast<int>(delay)));
         digitalWrite(STEP_PIN, LOW);
-        std::this_thread::sleep_for(std::chrono::microseconds(int(delay)));
+        std::this_thread::sleep_for(std::chrono::microseconds(
+            static_cast<int>(delay)));
     }
 #endif
 }
