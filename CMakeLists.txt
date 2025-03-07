@@ -5,6 +5,9 @@ project(MotorControllerProject)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# Set the build type to Debug to include debugging symbols
+set(CMAKE_BUILD_TYPE Debug)
+
 include(FetchContent)
 
 FetchContent_Declare(
