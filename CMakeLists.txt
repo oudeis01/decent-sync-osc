@@ -14,7 +14,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(osc)
 
+find_library(WIRINGPI_LIB wiringPi)
 
 add_executable(MotorControllerProject main.cpp motor.cpp receiver.cpp)
 include_directories(${CMAKE_SOURCE_DIR})
-target_link_libraries(MotorControllerProject PRIVATE pthread osc++)
+target_link_libraries(MotorControllerProject PRIVATE pthread osc++ ${WIRINGPI_LIB})
