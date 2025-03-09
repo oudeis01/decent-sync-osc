@@ -31,6 +31,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./motor_controller
+          asset_path: ./DecentralizedSynchronization
           asset_name: motor_controller-rpi-zero-2w
           asset_content_type: application/octet-stream
