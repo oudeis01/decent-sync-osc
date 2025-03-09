@@ -1,48 +1,44 @@
-name: Build and Auto-Release
+name: Build and Release for RPi Zero 2W
 
 on:
   push:
-    branches:
-      - main  # Or your target branch
+    branches: [main]
+  release:
+    types: [created]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Required to create/update releases
+      contents: write
+      packages: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      - name: Build using Docker
+      - name: Build Docker image
         run: |
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-          docker build -f Dockerfile.rpi-zero -t motor-controller-builder .
-          docker create -ti --name builder motor-controller-builder bash
-          docker cp builder:/app/build/DecentralizedSynchronization .
-          docker rm -f builder
-
-      - name: Create/Update Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: latest-build-${{ github.sha }}
-          release_name: Latest Build (${{ github.sha }})
-          draft: false
-          prerelease: false
+          docker buildx build \
+            --platform linux/arm/v6 \
+            -f Dockerfile.rpi-zero \
+            -t motor-controller-builder \
+            --output type=local,dest=./artifact \
+            .
 
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: rpi-zero-build-${{ github.sha }}
+          name: RPi Zero Build
+          body: Auto-generated build for Raspberry Pi Zero 2W
+          files: |
+            artifact/app/build/DecentralizedSynchronization
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./DecentralizedSynchronization
-          asset_name: motor_controller-rpi-zero-2w
-          asset_content_type: application/octet-stream

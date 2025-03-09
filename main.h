@@ -1,5 +1,5 @@
 #pragma once
-#include <osc++.hpp>
+#include "oscpp/include/oscpp/client.hpp"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -13,4 +13,3 @@
 #include "glob.h"
 #include "motor.h"
 #include "receiver.h"
-

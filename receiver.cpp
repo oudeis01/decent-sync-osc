@@ -1,11 +1,34 @@
 #include "receiver.h"
+#include <oscpp/server.hpp>
+#include <sstream>
+
+#ifdef PI_ZERO
+#include <wiringPi.h>
+#define EN_PIN 24
+#define DIR_PIN 23
+#define STEP_PIN 18
+#endif
+
+// Constructor
+OSCReceiver::OSCReceiver(MotorController& motorController)
+    : motorController_(motorController), running_(true), sockfd_(-1) {
+    setupSocket();
+}
+
+// Destructor
+OSCReceiver::~OSCReceiver() {
+    stop();
+    if (sockfd_ != -1) close(sockfd_);
+}
 
 void OSCReceiver::start() {
     std::stringstream ss;
-    ss << "OSC Receiver thread: " << std::this_thread::get_id() << '\n';
-    ss << "OSC Receiving on: " << inet_ntoa(((struct sockaddr_in) { .sin_addr = { INADDR_ANY } }).sin_addr) << ":" << PORT << '\n';
-    ss << "Format: /motor/rotate <steps> <delay> <direction>\n";
+    ss << "OSC Receiver thread: " << std::this_thread::get_id() << '\n'
+       << "OSC Receiving on port: " << PORT << '\n'
+       << "Format: /motor/rotate <steps> <delay> <direction>\n"
+       << "        /disable\n";
     std::cout << ss.str();
+    
     while (running_) {
         receiveAndProcessMessage();
     }
@@ -13,59 +36,79 @@ void OSCReceiver::start() {
 
 void OSCReceiver::stop() {
     running_ = false;
+    // Close socket to interrupt recvfrom
+    if (sockfd_ != -1) {
+        shutdown(sockfd_, SHUT_RDWR);
+        close(sockfd_);
+        sockfd_ = -1;
+    }
 }
 
 void OSCReceiver::setupSocket() {
-        sockfd_ = socket(AF_INET, SOCK_DGRAM, 0);
-        if (sockfd_ < 0) {
-            throw std::runtime_error("Error opening socket");
-        }
+    sockfd_ = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd_ < 0) {
+        throw std::runtime_error("Error opening socket");
+    }
 
-        struct sockaddr_in local_addr;
-        memset(&local_addr, 0, sizeof(local_addr));
-        local_addr.sin_family = AF_INET;
-        local_addr.sin_addr.s_addr = INADDR_ANY;
-        local_addr.sin_port = htons(PORT);
+    struct sockaddr_in serv_addr;
+    memset(&serv_addr, 0, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_port = htons(PORT);
 
-        if (bind(sockfd_, (struct sockaddr *)&local_addr, sizeof(local_addr)) < 0) {
-            throw std::runtime_error("Error on binding");
+    if (bind(sockfd_, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+        throw std::runtime_error("Error binding socket");
+    }
+}
+void OSCReceiver::processMessage(const OSCPP::Server::Message& msg) {
+    const std::string address = msg.address();
+    OSCPP::Server::ArgStream args(msg.args());
+    
+    if (address == "/motor/rotate") {
+        if (args.size() >= 3) {  // Use count() instead of remaining()
+            MotorController::MotorCommand cmd;
+            cmd.steps = args.int32();
+            cmd.delay = args.float32();
+            cmd.direction = args.int32() > 0;
+            motorController_.queueCommand(cmd);
         }
     }
+    else if (address == "/disable") {
+        std::cout << "Received disable command\n";
+        MotorController::MotorCommand cmd;
+        cmd.disable = true;
+        #ifdef PI_ZERO
+        digitalWrite(EN_PIN, HIGH);
+        #endif
+        motorController_.queueCommand(cmd);
+    }
+}
 
 void OSCReceiver::receiveAndProcessMessage() {
     char buffer[1024];
     struct sockaddr_in remote_addr;
     socklen_t remote_len = sizeof(remote_addr);
-    int n = recvfrom(sockfd_, buffer, sizeof(buffer), 0, (struct sockaddr *)&remote_addr, &remote_len);
+    
+    int n = recvfrom(sockfd_, buffer, sizeof(buffer), 0,
+                   (struct sockaddr *)&remote_addr, &remote_len);
     
     if (n < 0) {
-        std::cerr << "Error in recvfrom" << std::endl;
+        if (running_) std::cerr << "Error in recvfrom\n";
         return;
     }
 
     try {
-        osc::packet packet(buffer, n);
-        auto element = packet.parse();
-        if (element.is_message()) {
-            processMessage(element.to_message());
+        OSCPP::Server::Packet packet(buffer, n);
+        if (packet.isBundle()) {
+            OSCPP::Server::Bundle bundle(packet);
+            OSCPP::Server::PacketStream packets(bundle.packets());
+            while (!packets.atEnd()) {
+                processMessage(OSCPP::Server::Message(packets.next()));
+            }
+        } else {
+            processMessage(OSCPP::Server::Message(packet));
         }
-    } catch (std::invalid_argument& e) {
-        std::cerr << "Error parsing OSC packet: " << e.what() << std::endl;
-    }
-}
-
-void OSCReceiver::processMessage(const osc::message& msg) {
-    if (msg.address() == "/motor/rotate" && msg.values().size() == 3) {
-        MotorController::MotorCommand cmd;
-        cmd.steps = static_cast<int>(msg.value(0).to_float());
-        cmd.delay = msg.value(1).to_float();
-        cmd.direction = msg.value(2).to_int32() > 0;
-        
-        motorController_.queueCommand(cmd);
-    }
-    if(msg.address() == "/disable") {
-        MotorController::MotorCommand cmd;
-        cmd.disable = true;
-        motorController_.queueCommand(cmd);
+    } catch (const std::exception& e) {
+        std::cerr << "OSC Error: " << e.what() << '\n';
     }
 }
