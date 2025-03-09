@@ -15,7 +15,6 @@ RUN apt-get update && \
     fakeroot \
     devscripts \
     debhelper \
-    envsubst \
     && git clone https://github.com/WiringPi/WiringPi.git && \
     cd WiringPi && \
     ./build debian && \
