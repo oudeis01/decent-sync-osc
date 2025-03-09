@@ -1,8 +1,9 @@
 name: Build and Release for Raspberry Pi Zero 2W
 
 on:
-  release:
-    types: [created]
+    push:
+      branches:
+        - '**'
 
 jobs:
   build:
