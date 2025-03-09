@@ -1,0 +1,29 @@
+FROM balenalib/raspberry-pi-debian:latest
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    cmake \
+    && rm -rf /var/lib/apt/lists/*
+
+# Cache WiringPi installation
+RUN git clone https://github.com/WiringPi/WiringPi.git && \
+    cd WiringPi && \
+    ./build && \
+    cd .. && \
+    rm -rf WiringPi
+
+# Cache oscpack installation
+RUN git clone https://github.com/recotana/oscpack.git && \
+    cd oscpack && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf oscpack
+
+WORKDIR /app
+COPY . .
+
+# Build application
+RUN g++ -o motor_controller main.cpp motor.cpp receiver.cpp -I. -lwiringPi -loscpack -lpthread

@@ -18,11 +18,27 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(osc)
 include_directories(${osc_SOURCE_DIR}/include)
 
-find_library(WIRINGPI_LIB wiringPi 
-  HINTS ${CMAKE_SYSROOT}/usr/lib
-)
-include_directories(${CMAKE_SYSROOT}/usr/include)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/os-release")
+    file(READ "/etc/os-release" OS_RELEASE_CONTENTS)
+    if(OS_RELEASE_CONTENTS MATCHES "Arch")
+        message(STATUS "Detected Arch Linux, not using WiringPi")
+    else()
+        find_library(WIRINGPI_LIB wiringPi HINTS ${CMAKE_SYSROOT}/usr/lib)
+        if(WIRINGPI_LIB)
+            include_directories(${CMAKE_SYSROOT}/usr/include)
+            set(USE_WIRINGPI TRUE)
+        else()
+            message(WARNING "WiringPi library not found, proceeding without it")
+            set(USE_WIRINGPI FALSE)
+        endif()
+    endif()
+endif()
 
 add_executable(DecentralizedSynchronization main.cpp motor.cpp receiver.cpp)
 include_directories(${CMAKE_SOURCE_DIR})
-target_link_libraries(DecentralizedSynchronization PRIVATE pthread osc++ ${WIRINGPI_LIB})
+
+if(USE_WIRINGPI)
+    target_link_libraries(DecentralizedSynchronization PRIVATE pthread osc++ ${WIRINGPI_LIB})
+else()
+    target_link_libraries(DecentralizedSynchronization PRIVATE pthread osc++)
+endif()

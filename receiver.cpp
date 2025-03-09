@@ -63,7 +63,7 @@ void OSCReceiver::processMessage(const osc::message& msg) {
         
         motorController_.queueCommand(cmd);
     }
-    if(msg.address() == "/exit") {
+    if(msg.address() == "/disable") {
         MotorController::MotorCommand cmd;
         cmd.disable = true;
         motorController_.queueCommand(cmd);
