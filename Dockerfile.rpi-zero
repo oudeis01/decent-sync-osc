@@ -10,8 +10,9 @@ RUN apt-get update && apt-get install -y \
 # Install WiringPi properly
 RUN git clone https://github.com/WiringPi/WiringPi.git && \
     cd WiringPi && \
-    ./build && \
-    make install && \
+    ./build debian && \
+    cd debian-template && \
+    sudo apt install ./wiringpi-*.deb && \
     ldconfig && \
     cd .. && \
     rm -rf WiringPi
