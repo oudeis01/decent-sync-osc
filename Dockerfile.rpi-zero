@@ -8,11 +8,17 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install WiringPi properly
-RUN git clone https://github.com/WiringPi/WiringPi.git && \
+RUN apt-get update && \
+    apt-get install -y git gettext-base && \
+    git clone https://github.com/WiringPi/WiringPi.git && \
     cd WiringPi && \
     ./build debian && \
-    cd debian-template && \
-    sudo apt install ./wiringpi-*.deb
+    mv debian-template/wiringpi-*.deb . && \
+    apt-get install -y ./wiringpi-*.deb && \
+    cd .. && \
+    rm -rf WiringPi && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install oscpack
 RUN git clone https://github.com/dimitry-ishenko-cpp/osc && \
