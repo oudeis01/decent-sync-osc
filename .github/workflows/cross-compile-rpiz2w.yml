@@ -18,9 +18,11 @@ jobs:
       - name: Build using Docker
         run: |
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-          docker build -f Dockerfile.rpi-zero -t motor-controller-builder .
+          docker build -f Dockerfile.rpi-zero \
+            --build-arg CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release" \
+            -t motor-controller-builder .
           docker create -ti --name builder motor-controller-builder bash
-          docker cp builder:/app/motor_controller .
+          docker cp builder:/app/build/DecentralizedSynchronization .
           docker rm -f builder
 
       - name: Upload Release Asset
