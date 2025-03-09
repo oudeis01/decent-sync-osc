@@ -12,7 +12,7 @@ RUN git clone https://github.com/WiringPi/WiringPi.git && \
     cd WiringPi && \
     ./build debian && \
     cd debian-template && \
-    sudo apt install ./wiringpi-*.deb &&
+    sudo apt install ./wiringpi-*.deb
 
 # Install oscpack
 RUN git clone https://github.com/dimitry-ishenko-cpp/osc && \
