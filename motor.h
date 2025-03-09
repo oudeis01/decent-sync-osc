@@ -19,6 +19,7 @@ public:
         int steps;
         float delay;
         bool direction;
+        bool disable;
     };
 
     MotorController() : running_(true) {}
@@ -27,7 +28,7 @@ public:
     void queueCommand(const MotorCommand& cmd);
 
 private:
-    void moveMotor(int steps, float delay, bool direction);
+    void moveMotor(int steps, float delay, bool direction, bool disable);
     void motorControlThread();
 
     std::queue<MotorCommand> commandQueue_;

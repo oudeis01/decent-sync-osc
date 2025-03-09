@@ -30,19 +30,25 @@ void MotorController::queueCommand(const MotorCommand& cmd) {
     queueCV_.notify_one();
 }
 
-void MotorController::moveMotor(int steps, float delay, bool direction) {
+void MotorController::moveMotor(int steps, float delay, bool direction, bool disable) {
 #ifdef ARCH
     // Placeholder for motor control logic
     std::cout << "Moving motor: \n" 
                 "\tsteps: "<< steps << "\n" <<
                 "\tdelay: "<< delay << "ms\n" <<
-                "\tdirec: " << (direction ? "CW" : "CCW") << "\n";
+                "\tdirec: " << (direction ? "CW" : "CCW") << "\n" <<
+                "\tdisable: " << (disable ? "true" : "false") << "\n";
     std::this_thread::sleep_for(std::chrono::milliseconds(int(delay)*steps));
 #elif defined(PI_ZERO)
     std::cout << "Moving motor: \n" 
                 "\tsteps: "<< steps << "\n" <<
                 "\tdelay: "<< delay << "ms\n" <<
-                "\tdirec: " << (direction ? "CW" : "CCW") << "\n";
+                "\tdirec: " << (direction ? "CW" : "CCW") << "\n" <<
+                "\tdisable: " << (disable ? "true" : "false") << "\n";
+    if(disable){
+        digitalWrite(EN_PIN, HIGH);
+        return;
+    }
     digitalWrite(DIR_PIN, direction);
     for(int i=0; i<steps; ++i){
         digitalWrite(STEP_PIN, HIGH);
@@ -66,6 +72,6 @@ void MotorController::motorControlThread() {
         commandQueue_.pop();
         lock.unlock();
         
-        moveMotor(cmd.steps, cmd.delay, cmd.direction);
+        moveMotor(cmd.steps, cmd.delay, cmd.direction, cmd.disable);
     }
 }

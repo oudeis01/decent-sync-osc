@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(MotorControllerProject)
+project(DecentralizedSynchronization)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -16,9 +16,13 @@ FetchContent_Declare(
   GIT_TAG v1.3
 )
 FetchContent_MakeAvailable(osc)
+include_directories(${osc_SOURCE_DIR}/include)
 
-find_library(WIRINGPI_LIB wiringPi)
+find_library(WIRINGPI_LIB wiringPi 
+  HINTS ${CMAKE_SYSROOT}/usr/lib
+)
+include_directories(${CMAKE_SYSROOT}/usr/include)
 
-add_executable(MotorControllerProject main.cpp motor.cpp receiver.cpp)
+add_executable(DecentralizedSynchronization main.cpp motor.cpp receiver.cpp)
 include_directories(${CMAKE_SOURCE_DIR})
-target_link_libraries(MotorControllerProject PRIVATE pthread osc++ ${WIRINGPI_LIB})
+target_link_libraries(DecentralizedSynchronization PRIVATE pthread osc++ ${WIRINGPI_LIB})
