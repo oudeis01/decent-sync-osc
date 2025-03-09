@@ -1,4 +1,4 @@
-name: Build and Release for RPi Zero 2W
+name: Build for RPi Zero 2W
 
 on:
   push:
@@ -11,13 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -28,17 +25,16 @@ jobs:
           docker buildx build \
             --platform linux/arm/v6 \
             -f Dockerfile.rpi-zero \
-            -t motor-controller-builder \
+            -t motor-builder \
             --output type=local,dest=./artifact \
             .
 
-      - name: Upload Release Asset
+      - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: rpi-zero-build-${{ github.sha }}
+          files: artifact/app/build/DecentralizedSynchronization
+          tag_name: rpi-zero-${{ github.sha }}
           name: RPi Zero Build
-          body: Auto-generated build for Raspberry Pi Zero 2W
-          files: |
-            artifact/app/build/DecentralizedSynchronization
+          draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
