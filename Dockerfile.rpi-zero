@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 RUN git clone https://github.com/WiringPi/WiringPi.git && \
     cd WiringPi && \
     ./build && \
-    make install && \  # Add proper installation
+    make install && \
     ldconfig && \
     cd .. && \
     rm -rf WiringPi
