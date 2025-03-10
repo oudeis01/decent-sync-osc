@@ -8,6 +8,24 @@ RUN apt-get update && apt-get install -y \
     wiringpi \
     && rm -rf /var/lib/apt/lists/*
 
+# Install WiringPi with proper build dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    git \
+    gettext-base \
+    fakeroot \
+    devscripts \
+    debhelper \
+    && git clone https://github.com/WiringPi/WiringPi.git && \
+    cd WiringPi && \
+    ./build debian && \
+    mv debian-template/wiringpi_*.deb . && \
+    apt-get install -y ./wiringpi_*.deb && \
+    cd .. && \
+    rm -rf WiringPi && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY . .
 
