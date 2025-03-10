@@ -2,7 +2,7 @@
 
 void MotorController::start() {
     motorThread_ = std::thread(&MotorController::motorControlThread, this);
-#ifdef PI_ZERO
+// #ifdef PI_ZERO
     if (gpioInitialise() < 0) {
         throw std::runtime_error("Failed to initialize pigpio");
     }
@@ -11,7 +11,7 @@ void MotorController::start() {
     gpioSetMode(STEP_PIN, PI_OUTPUT);
     gpioSetPullUpDown(EN_PIN, PI_PUD_UP);
     gpioWrite(EN_PIN, 0); // Enable LOW
-#endif
+// #endif
 }
 
 void MotorController::stop() {
@@ -20,10 +20,10 @@ void MotorController::stop() {
     if (motorThread_.joinable()) {
         motorThread_.join();
     }
-#ifdef PI_ZERO
+// #ifdef PI_ZERO
     gpioWrite(EN_PIN, 1); // Disable HIGH
     gpioTerminate();
-#endif
+// #endif
 }
 void MotorController::queueCommand(const MotorCommand& cmd) {
     std::lock_guard<std::mutex> lock(queueMutex_);
@@ -32,15 +32,15 @@ void MotorController::queueCommand(const MotorCommand& cmd) {
 }
 
 void MotorController::moveMotor(int steps, float delay, bool direction, bool disable) {
-#ifdef ARCH
-    // Placeholder for motor control logic
-    std::cout << "Moving motor: \n" 
-                "\tsteps: "<< steps << "\n" <<
-                "\tdelay: "<< delay << "ms\n" <<
-                "\tdirec: " << (direction ? "CW" : "CCW") << "\n" <<
-                "\tdisable: " << (disable ? "true" : "false") << "\n";
-    std::this_thread::sleep_for(std::chrono::milliseconds(int(delay)*steps));
-#elif defined(PI_ZERO)
+// #ifdef ARCH
+//     // Placeholder for motor control logic
+//     std::cout << "Moving motor: \n" 
+//                 "\tsteps: "<< steps << "\n" <<
+//                 "\tdelay: "<< delay << "ms\n" <<
+//                 "\tdirec: " << (direction ? "CW" : "CCW") << "\n" <<
+//                 "\tdisable: " << (disable ? "true" : "false") << "\n";
+//     std::this_thread::sleep_for(std::chrono::milliseconds(int(delay)*steps));
+// #elif defined(PI_ZERO)
     std::cout << "Moving motor: \n" 
                 "\tsteps: "<< steps << "\n" <<
                 "\tdelay: "<< delay << "ms\n" <<
@@ -59,7 +59,7 @@ void MotorController::moveMotor(int steps, float delay, bool direction, bool dis
         std::this_thread::sleep_for(std::chrono::microseconds(
             static_cast<int>(delay)));
     }
-#endif
+// #endif
 }
 
 void MotorController::motorControlThread() {

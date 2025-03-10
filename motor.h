@@ -7,12 +7,12 @@
 #include <mutex>
 #include <condition_variable>
 #include "glob.h"
-#if defined(PI_ZERO)
+// #if defined(PI_ZERO)
     #include <pigpio.h>
     #define EN_PIN 24
     #define DIR_PIN 23
     #define STEP_PIN 18
-#endif
+// #endif
 class MotorController {
 public:
     struct MotorCommand {

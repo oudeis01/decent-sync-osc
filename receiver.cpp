@@ -74,18 +74,18 @@ void OSCReceiver::processMessage(const OSCPP::Server::Message& msg) {
         std::cout << "Received disable command\n";
         MotorController::MotorCommand cmd;
         cmd.disable = true;
-        #ifdef PI_ZERO
+        // #ifdef PI_ZERO
         gpioWrite(EN_PIN, 1);
-        #endif
+        // #endif
         motorController_.queueCommand(cmd);
     }
     else if (address == "/enable") {
         std::cout << "Received enable command\n";
         MotorController::MotorCommand cmd;
         cmd.disable = true;
-        #ifdef PI_ZERO
+        // #ifdef PI_ZERO
         gpioWrite(EN_PIN, 0);
-        #endif
+        // #endif
         motorController_.queueCommand(cmd);
     }
 }
