@@ -1,4 +1,4 @@
-name: Build for RPi Zero 2W
+name: Build RPi Zero 2W
 
 on:
   push:
@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          path: main
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -32,9 +34,11 @@ jobs:
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
-          files: artifact/app/build/DecentralizedSynchronization
+          files: |
+            artifact/app/build/DecentralizedSynchronization
           tag_name: rpi-zero-${{ github.sha }}
           name: RPi Zero Build
           draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

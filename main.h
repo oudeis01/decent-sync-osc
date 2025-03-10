@@ -1,5 +1,5 @@
 #pragma once
-#include "oscpp/include/oscpp/client.hpp"
+#include "oscpp/client.hpp"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
