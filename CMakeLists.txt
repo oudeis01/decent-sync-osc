@@ -12,28 +12,14 @@ include_directories(
     ${CMAKE_SOURCE_DIR}               # Project headers
 )
 
-# WiringPi detection
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/os-release")
-    file(READ "/etc/os-release" OS_RELEASE_CONTENTS)
-    if(OS_RELEASE_CONTENTS MATCHES "Arch")
-        message(STATUS "Detected Arch Linux, skipping WiringPi")
-        set(USE_WIRINGPI FALSE)
-    else()
-        # Try to find WiringPi
-        set(CMAKE_PREFIX_PATH "/usr/local")
-        find_library(WIRINGPI_LIB wiringPi
-            HINTS ${CMAKE_SYSROOT}/usr/lib
-            PATH_SUFFIXES lib
-        )
-        if(WIRINGPI_LIB)
-            message(STATUS "Found WiringPi: ${WIRINGPI_LIB}")
-            include_directories(${CMAKE_SYSROOT}/usr/include)
-            set(USE_WIRINGPI TRUE)
-        else()
-            message(WARNING "WiringPi library not found - using mock mode")
-            set(USE_WIRINGPI FALSE)
-        endif()
-    endif()
+# pigpio detection
+find_library(PIGPIO_LIB pigpio)
+if(PIGPIO_LIB)
+    message(STATUS "Found pigpio: ${PIGPIO_LIB}")
+    set(USE_PIGPIO TRUE)
+else()
+    message(WARNING "pigpio library not found - using mock mode")
+    set(USE_PIGPIO FALSE)
 endif()
 
 # Executable setup
@@ -44,18 +30,14 @@ add_executable(DecentralizedSynchronization
 )
 
 # Link libraries
-if(USE_WIRINGPI)
-    target_link_libraries(DecentralizedSynchronization PRIVATE
-        pthread
-        ${WIRINGPI_LIB}
-    )
-else()
-    target_link_libraries(DecentralizedSynchronization PRIVATE
-        pthread
-    )
-endif()
+target_link_libraries(DecentralizedSynchronization PRIVATE
+    pthread
+)
 
-# Add PI_ZERO definition if needed
-if(USE_WIRINGPI)
+if(USE_PIGPIO)
+    target_link_libraries(DecentralizedSynchronization PRIVATE
+        ${PIGPIO_LIB}
+        rt  # Required for pigpio
+    )
     target_compile_definitions(DecentralizedSynchronization PRIVATE PI_ZERO)
 endif()
