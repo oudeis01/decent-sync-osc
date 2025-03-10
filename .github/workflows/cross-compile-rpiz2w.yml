@@ -16,13 +16,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          path: main
+          fetch-depth: 0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Build Docker image
         run: |
+          # Verify file existence first
+          ls -la
+          echo "-----"
+          cat Dockerfile.rpi-zero
+
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
           docker buildx build \
             --platform linux/arm/v6 \
