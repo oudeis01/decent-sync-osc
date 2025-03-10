@@ -1,0 +1,3 @@
+[submodule "oscpp"]
+	path = oscpp
+	url = https://github.com/oudeis01/oscpp
