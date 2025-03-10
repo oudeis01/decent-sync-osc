@@ -3,14 +3,15 @@
 void MotorController::start() {
     motorThread_ = std::thread(&MotorController::motorControlThread, this);
 #ifdef PI_ZERO
-    wiringPiSetupGpio();
-    pinMode(EN_PIN, OUTPUT);
-    pinMode(DIR_PIN, OUTPUT);
-    pinMode(STEP_PIN, OUTPUT);
-    pullUpDnControl(EN_PIN, PUD_UP);
-    digitalWrite(EN_PIN, LOW);
+    if (gpioInitialise() < 0) {
+        throw std::runtime_error("Failed to initialize pigpio");
+    }
+    gpioSetMode(EN_PIN, PI_OUTPUT);
+    gpioSetMode(DIR_PIN, PI_OUTPUT);
+    gpioSetMode(STEP_PIN, PI_OUTPUT);
+    gpioSetPullUpDown(EN_PIN, PI_PUD_UP);
+    gpioWrite(EN_PIN, 0); // Enable LOW
 #endif
-
 }
 
 void MotorController::stop() {
@@ -20,10 +21,10 @@ void MotorController::stop() {
         motorThread_.join();
     }
 #ifdef PI_ZERO
-    digitalWrite(EN_PIN, HIGH);
+    gpioWrite(EN_PIN, 1); // Disable HIGH
+    gpioTerminate();
 #endif
 }
-
 void MotorController::queueCommand(const MotorCommand& cmd) {
     std::lock_guard<std::mutex> lock(queueMutex_);
     commandQueue_.push(cmd);
@@ -46,15 +47,15 @@ void MotorController::moveMotor(int steps, float delay, bool direction, bool dis
                 "\tdirec: " << (direction ? "CW" : "CCW") << "\n" <<
                 "\tdisable: " << (disable ? "true" : "false") << "\n";
     if(disable){
-        digitalWrite(EN_PIN, HIGH);
+        gpioWrite(EN_PIN, 1);
         return;
     }
-    digitalWrite(DIR_PIN, direction);
+    gpioWrite(DIR_PIN, direction);
     for(int i=0; i<steps; ++i){
-        digitalWrite(STEP_PIN, HIGH);
+        gpioWrite(STEP_PIN, 1);
         std::this_thread::sleep_for(std::chrono::microseconds(
             static_cast<int>(delay)));
-        digitalWrite(STEP_PIN, LOW);
+        gpioWrite(STEP_PIN, 0);
         std::this_thread::sleep_for(std::chrono::microseconds(
             static_cast<int>(delay)));
     }

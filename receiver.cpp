@@ -3,10 +3,7 @@
 #include <sstream>
 
 #ifdef PI_ZERO
-#include <wiringPi.h>
-#define EN_PIN 24
-#define DIR_PIN 23
-#define STEP_PIN 18
+#include <pigpio.h>
 #endif
 
 // Constructor
@@ -78,7 +75,7 @@ void OSCReceiver::processMessage(const OSCPP::Server::Message& msg) {
         MotorController::MotorCommand cmd;
         cmd.disable = true;
         #ifdef PI_ZERO
-        digitalWrite(EN_PIN, HIGH);
+        gpioWrite(EN_PIN, 1);
         #endif
         motorController_.queueCommand(cmd);
     }
