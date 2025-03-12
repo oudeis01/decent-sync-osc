@@ -70,7 +70,7 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
         msg.closeMessage();
     } else {
         // Non-empty queue: use bundle with timestamp
-        auto bundle = packet.openBundle(0ULL); // <-- 0 = immediate execution timestamp
+        auto bundle = packet.openBundle(0ULL); // Timestamp 0 = immediate execution
         while (!q_copy.empty()) {
             const Command& cmd = q_copy.front();
             
@@ -97,7 +97,6 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
             cmdMsg.closeMessage();
             q_copy.pop();
         }
-        bundle.close();
     }
 
     sendto(sock, packet.data(), packet.size(), 0,
