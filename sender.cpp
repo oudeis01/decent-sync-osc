@@ -7,6 +7,9 @@
 #include <iostream>
 #include <sstream>
 
+constexpr int RESPONSE_PORT = 12345;
+constexpr size_t MAX_BUFFER_SIZE = 16384;
+
 void Sender::print_connection_info(const std::string& ip, int port) {
     std::cout << "\n[NEW CLIENT]\n"
               << "  Address: " << ip << ":" << port << "\n"
@@ -14,7 +17,6 @@ void Sender::print_connection_info(const std::string& ip, int port) {
 }
 
 void Sender::sendAck(const std::string& ip, int port, int index) {
-    const int RESPONSE_PORT = 12345;
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
@@ -49,7 +51,7 @@ void Sender::sendDone(const std::string& ip, int port, int index) {
 
 void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>& queue) {
     constexpr int RESPONSE_PORT = 12345;
-    constexpr size_t BUFFER_SIZE = 8192; // Increased buffer size
+    constexpr size_t BUFFER_SIZE = 8192;
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
@@ -59,27 +61,27 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
     std::array<char, BUFFER_SIZE> buffer;
     OSCPP::Client::Packet packet(buffer.data(), buffer.size());
     
-    // Start message with array argument
-    auto msg = packet.openMessage("/info", 1); // 1 argument (the array)
-    auto main_array = msg.openArray();
+    // Open message with 1 argument (the array)
+    auto msg = packet.openMessage("/info", 1);
+    auto main_array = msg.openArray();  // Array type is automatic
 
     std::queue<Command> q_copy = queue;
     while (!q_copy.empty()) {
         const Command& cmd = q_copy.front();
         
         // Create nested array for each command
-        auto cmd_array = main_array.openArray();
-        cmd_array.int32(cmd.index)
-                 .string(cmd.type == Command::ROTATE ? "rotate" :
+        auto cmd_entry = main_array.openArray();
+        cmd_entry.int32(cmd.index)
+                 .string(cmd.type == Command::ROTATE ? "rotate" : 
                          cmd.type == Command::ENABLE ? "enable" : "disable");
         
         if (cmd.type == Command::ROTATE) {
-            cmd_array.int32(cmd.steps)
+            cmd_entry.int32(cmd.steps)
                      .int32(cmd.delayUs)
                      .int32(cmd.direction);
         }
+        cmd_entry.closeArray();
         
-        cmd_array.closeArray();
         q_copy.pop();
     }
 
