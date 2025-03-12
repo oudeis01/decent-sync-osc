@@ -20,16 +20,31 @@ int main() {
         cmd_queue.pop();
         lock.unlock();
 
-        switch (cmd.type) {
-            case Command::ROTATE:
-                motor.rotate(cmd.steps, cmd.delayUs, cmd.direction);
-                break;
-            case Command::ENABLE:
-                motor.enable();
-                break;
-            case Command::DISABLE:
-                motor.disable();
-                break;
+        std::cout << "\nExecuting command #" << cmd.index 
+                  << " from " << cmd.senderIp 
+                  << ":" << cmd.senderPort << "\n";
+
+        try {
+            switch (cmd.type) {
+                case Command::ROTATE:
+                    std::cout << "Starting rotation - Steps: " << cmd.steps
+                              << ", Delay: " << cmd.delayUs << "μs\n";
+                    motor.rotate(cmd.steps, cmd.delayUs, cmd.direction);
+                    break;
+                case Command::ENABLE:
+                    std::cout << "Enabling motor\n";
+                    motor.enable();
+                    break;
+                case Command::DISABLE:
+                    std::cout << "Disabling motor\n";
+                    motor.disable();
+                    break;
+                case Command::INFO:
+                    continue;  // Already handled in receiver
+            }
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Error executing command: " << e.what() << "\n";
         }
 
         Sender sender;

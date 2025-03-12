@@ -7,10 +7,10 @@
 #include <iostream>
 
 void Sender::print_connection_info(const std::string& ip, int port) {
-    std::cout << "Established connection to: " << ip << ":" << port << "\n";
-    std::cout << "Available commands:\n";
-    std::cout << "  /rotate <steps> <delay_us> <direction(0|1)>\n";
-    std::cout << "  /enable\n  /disable\n  /info\n";
+    std::cout << "\nNew client connected:\n"
+              << "  IP: " << ip << "\n"
+              << "  Port: " << port << "\n"
+              << "  Ready to receive commands\n";
 }
 
 void Sender::sendAck(const std::string& ip, int port, int index) {
@@ -43,6 +43,9 @@ void Sender::sendDone(const std::string& ip, int port, int index) {
 
     sendto(sock, packet.data(), packet.size(), 0, (sockaddr*)&addr, sizeof(addr));
     close(sock);
+    
+    std::cout << "Completed command #" << index << " for "
+              << ip << ":" << port << "\n";
 }
 
 void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>& queue) {

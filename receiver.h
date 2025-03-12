@@ -7,10 +7,11 @@
 #include <string>
 #include <netinet/in.h>
 #include <condition_variable>
-#include <thread>  // Add missing include
+#include <thread> 
 #include <iostream>
 #include <ifaddrs.h>
 #include <sys/socket.h>
+#include <unordered_set>
 
 // Forward declaration
 namespace OSCPP {
@@ -23,7 +24,7 @@ struct Command {
     int index;
     std::string senderIp;
     int senderPort;
-    enum Type { ROTATE, ENABLE, DISABLE } type;
+    enum Type { ROTATE, ENABLE, DISABLE, INFO } type;
     int steps;
     int delayUs;
     bool direction;
@@ -42,6 +43,9 @@ public:
 
 private:
     void run();
+    void process_packet(const OSCPP::Server::Packet& packet, sockaddr_in& cliaddr);
+    void track_connection(const std::string& ip, int port);
+
     int port_;
     int sockfd_;
     std::queue<Command>& commandQueue_;
@@ -50,6 +54,7 @@ private:
     std::condition_variable& cv_;
     bool running_;
     std::thread thread_;
+    std::unordered_set<std::string> connected_clients_;
 };
 
 #endif

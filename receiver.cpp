@@ -72,6 +72,13 @@ void Receiver::stop() {
     running_ = false;
     if (thread_.joinable()) thread_.join();
 }
+void Receiver::track_connection(const std::string& ip, int port) {
+    std::string key = ip + ":" + std::to_string(port);
+    if (connected_clients_.find(key) == connected_clients_.end()) {
+        connected_clients_.insert(key);
+        Sender::print_connection_info(ip, port);
+    }
+}
 
 void Receiver::processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& cliaddr) {
     if (packet.isMessage()) {
@@ -81,6 +88,7 @@ void Receiver::processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& c
         Command cmd{};
         cmd.senderIp = inet_ntoa(cliaddr.sin_addr);
         cmd.senderPort = ntohs(cliaddr.sin_port);
+        track_connection(cmd.senderIp, cmd.senderPort);
 
         if (address == "/rotate") {
             OSCPP::Server::ArgStream args = msg.args();
@@ -90,18 +98,27 @@ void Receiver::processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& c
             cmd.direction = args.int32();
             cmd.index = ++commandIndex_;
 
+            std::cout << "Received ROTATE command from " << cmd.senderIp 
+                        << ":" << cmd.senderPort << " - Steps: " << cmd.steps
+                        << ", Delay: " << cmd.delayUs << "μs, Direction: " 
+                        << (cmd.direction ? "CW" : "CCW") << "\n";
+
             std::lock_guard<std::mutex> lock(queueMutex_);
             commandQueue_.push(cmd);
             cv_.notify_one();
         } else if (address == "/enable") {
             cmd.type = Command::ENABLE;
             cmd.index = ++commandIndex_;
+            std::cout << "Received ENABLE command from " << cmd.senderIp 
+                        << ":" << cmd.senderPort << "\n";
             std::lock_guard<std::mutex> lock(queueMutex_);
             commandQueue_.push(cmd);
             cv_.notify_one();
         } else if (address == "/disable") {
             cmd.type = Command::DISABLE;
             cmd.index = ++commandIndex_;
+            std::cout << "Received DISABLE command from " << cmd.senderIp
+                          << ":" << cmd.senderPort << "\n";
             std::lock_guard<std::mutex> lock(queueMutex_);
             commandQueue_.push(cmd);
             cv_.notify_one();
@@ -114,7 +131,6 @@ void Receiver::processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& c
 
         Sender sender;
         sender.sendAck(cmd.senderIp, cmd.senderPort, cmd.index);
-        std::cout << "New connection from: " << cmd.senderIp << ":" << cmd.senderPort << "\n";
     }
 }
 
