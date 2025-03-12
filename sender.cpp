@@ -60,36 +60,35 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
     std::array<char, MAX_BUFFER_SIZE> buffer;
     OSCPP::Client::Packet packet(buffer.data(), buffer.size());
     
-    auto msg = packet.openMessage("/info", 1);
-    auto main_array = msg.openArray();
+    // Open message with dynamic arguments (no array)
+    auto msg = packet.openMessage("/info", 0); // Argument count adjusted dynamically
 
     std::queue<Command> q_copy = queue;
     while (!q_copy.empty()) {
         const Command& cmd = q_copy.front();
         
-        main_array.int32(cmd.index);
+        // Add command data directly to the message
+        msg.int32(cmd.index);
         switch (cmd.type) {
             case Command::ROTATE:
-                main_array.string("rotate")
-                         .int32(cmd.steps)
-                         .int32(cmd.delayUs)
-                         .int32(cmd.direction);
+                msg.string("rotate")
+                   .int32(cmd.steps)
+                   .int32(cmd.delayUs)
+                   .int32(cmd.direction);
                 break;
             case Command::ENABLE:
-                main_array.string("enable");
+                msg.string("enable");
                 break;
             case Command::DISABLE:
-                main_array.string("disable");
+                msg.string("disable");
                 break;
             case Command::INFO:
-                // INFO commands shouldn't be in the queue; skip if present
-                break;
+                break; // Skip INFO commands
         }
         
         q_copy.pop();
     }
 
-    main_array.closeArray();
     msg.closeMessage();
 
     sendto(sock, packet.data(), packet.size(), 0,
