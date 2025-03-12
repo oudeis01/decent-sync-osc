@@ -66,7 +66,7 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
     if (q_copy.empty()) {
         // Empty queue: Send "/info" with a single string argument
         auto msg = packet.openMessage("/info", 1); // 1 argument
-        msg.string("no commands in the queue");
+        msg.string("nocommandsinthequeue");
         msg.closeMessage();
     } else {
         // Non-empty queue: Send individual messages (not bundles)
