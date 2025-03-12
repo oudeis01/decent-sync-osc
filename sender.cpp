@@ -59,7 +59,7 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
     OSCPP::Client::Packet packet(buffer.data(), buffer.size());
     
     // Start message with array argument
-    auto msg = packet.openMessage("/info", OSCPP::Tags::array());
+    auto msg = packet.openMessage("/info", 1);
     auto main_array = msg.openArray();
 
     std::queue<Command> q_copy = queue;
