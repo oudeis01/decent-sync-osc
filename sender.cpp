@@ -64,37 +64,33 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
     std::queue<Command> q_copy = queue;
 
     if (q_copy.empty()) {
-        // Empty queue case
-        auto msg = packet.openMessage("/info", 1);
+        // Empty queue: Send "/info" with a single string argument
+        auto msg = packet.openMessage("/info", 1); // 1 argument
         msg.string("no commands in the queue");
         msg.closeMessage();
     } else {
-        // Non-empty queue: use bundle with timestamp
-        auto bundle = packet.openBundle(0ULL); // Timestamp 0 = immediate execution
+        // Non-empty queue: Send individual messages (not bundles)
         while (!q_copy.empty()) {
             const Command& cmd = q_copy.front();
-            
-            // Create message for each command
-            auto cmdMsg = bundle.openMessage("/info", 0);
-            cmdMsg.int32(cmd.index);
-            
+            auto msg = packet.openMessage("/info", 0); // Auto-count arguments
+            msg.int32(cmd.index);
             switch (cmd.type) {
                 case Command::ROTATE:
-                    cmdMsg.string("rotate")
-                          .int32(cmd.steps)
-                          .int32(cmd.delayUs)
-                          .int32(cmd.direction);
+                    msg.string("rotate")
+                       .int32(cmd.steps)
+                       .int32(cmd.delayUs)
+                       .int32(cmd.direction);
                     break;
                 case Command::ENABLE:
-                    cmdMsg.string("enable");
+                    msg.string("enable");
                     break;
                 case Command::DISABLE:
-                    cmdMsg.string("disable");
+                    msg.string("disable");
                     break;
                 case Command::INFO:
-                    break; // Skip
+                    break;
             }
-            cmdMsg.closeMessage();
+            msg.closeMessage();
             q_copy.pop();
         }
     }
