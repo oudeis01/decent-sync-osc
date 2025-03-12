@@ -8,6 +8,7 @@
 #include <iostream>
 #include <ifaddrs.h>
 #include <sys/socket.h>
+#include <sstream>
 
 Receiver::Receiver(int port, std::queue<Command>& queue, std::mutex& mutex,
                    std::atomic<int>& cmdIndex, std::condition_variable& cv)
@@ -72,11 +73,15 @@ void Receiver::stop() {
     running_ = false;
     if (thread_.joinable()) thread_.join();
 }
-void Receiver::track_connection(const std::string& ip, int port) {
-    std::string key = ip + ":" + std::to_string(port);
-    if (connected_clients_.find(key) == connected_clients_.end()) {
-        connected_clients_.insert(key);
+void Receiver::trackConnection(const std::string& ip, int port) {
+    auto it = client_ports_.find(ip);
+    if (it == client_ports_.end()) {
+        client_ports_[ip] = port;
         Sender::print_connection_info(ip, port);
+    }
+    else if (it->second != port) {
+        std::cout << "Client " << ip << " reconnected from new port: " << port << "\n";
+        it->second = port;
     }
 }
 
@@ -88,49 +93,57 @@ void Receiver::processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& c
         Command cmd{};
         cmd.senderIp = inet_ntoa(cliaddr.sin_addr);
         cmd.senderPort = ntohs(cliaddr.sin_port);
-        track_connection(cmd.senderIp, cmd.senderPort);
+        trackConnection(cmd.senderIp, cmd.senderPort);
 
-        if (address == "/rotate") {
-            OSCPP::Server::ArgStream args = msg.args();
-            cmd.type = Command::ROTATE;
-            cmd.steps = args.int32();
-            cmd.delayUs = args.int32();
-            cmd.direction = args.int32();
-            cmd.index = ++commandIndex_;
+        try {
+            if (address == "/rotate") {
+                OSCPP::Server::ArgStream args = msg.args();
+                cmd.type = Command::ROTATE;
+                cmd.steps = args.int32();
+                cmd.delayUs = args.int32();
+                cmd.direction = args.int32();
+                cmd.index = ++commandIndex_;
 
-            std::cout << "Received ROTATE command from " << cmd.senderIp 
-                        << ":" << cmd.senderPort << " - Steps: " << cmd.steps
-                        << ", Delay: " << cmd.delayUs << "μs, Direction: " 
-                        << (cmd.direction ? "CW" : "CCW") << "\n";
+                std::cout << "[CMD] ROTATE from " << cmd.senderIp 
+                          << " Steps: " << cmd.steps
+                          << " μDelay: " << cmd.delayUs 
+                          << " Dir: " << (cmd.direction ? "CW" : "CCW") << "\n";
 
-            std::lock_guard<std::mutex> lock(queueMutex_);
-            commandQueue_.push(cmd);
-            cv_.notify_one();
-        } else if (address == "/enable") {
-            cmd.type = Command::ENABLE;
-            cmd.index = ++commandIndex_;
-            std::cout << "Received ENABLE command from " << cmd.senderIp 
-                        << ":" << cmd.senderPort << "\n";
-            std::lock_guard<std::mutex> lock(queueMutex_);
-            commandQueue_.push(cmd);
-            cv_.notify_one();
-        } else if (address == "/disable") {
-            cmd.type = Command::DISABLE;
-            cmd.index = ++commandIndex_;
-            std::cout << "Received DISABLE command from " << cmd.senderIp
-                          << ":" << cmd.senderPort << "\n";
-            std::lock_guard<std::mutex> lock(queueMutex_);
-            commandQueue_.push(cmd);
-            cv_.notify_one();
-        } else if (address == "/info") {
+                std::lock_guard<std::mutex> lock(queueMutex_);
+                commandQueue_.push(cmd);
+                cv_.notify_one();
+            }
+            else if (address == "/enable") {
+                cmd.type = Command::ENABLE;
+                cmd.index = ++commandIndex_;
+                std::cout << "[CMD] ENABLE from " << cmd.senderIp << "\n";
+                std::lock_guard<std::mutex> lock(queueMutex_);
+                commandQueue_.push(cmd);
+                cv_.notify_one();
+            }
+            else if (address == "/disable") {
+                cmd.type = Command::DISABLE;
+                cmd.index = ++commandIndex_;
+                std::cout << "[CMD] DISABLE from " << cmd.senderIp << "\n";
+                std::lock_guard<std::mutex> lock(queueMutex_);
+                commandQueue_.push(cmd);
+                cv_.notify_one();
+            }
+            else if (address == "/info") {
+                cmd.type = Command::INFO;
+                Sender sender;
+                std::lock_guard<std::mutex> lock(queueMutex_);
+                sender.sendInfo(cmd.senderIp, cmd.senderPort, commandQueue_);
+                return;
+            }
+
             Sender sender;
-            std::lock_guard<std::mutex> lock(queueMutex_);
-            sender.sendInfo(cmd.senderIp, cmd.senderPort, commandQueue_);
-            return;
+            sender.sendAck(cmd.senderIp, cmd.senderPort, cmd.index);
         }
-
-        Sender sender;
-        sender.sendAck(cmd.senderIp, cmd.senderPort, cmd.index);
+        catch (const std::exception& e) {
+            std::cerr << "[ERROR] From " << cmd.senderIp 
+                      << ":" << cmd.senderPort << " - " << e.what() << "\n";
+        }
     }
 }
 

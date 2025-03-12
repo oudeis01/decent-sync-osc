@@ -11,7 +11,7 @@
 #include <iostream>
 #include <ifaddrs.h>
 #include <sys/socket.h>
-#include <unordered_set>
+#include <unordered_map>
 
 // Forward declaration
 namespace OSCPP {
@@ -36,15 +36,14 @@ public:
     Receiver(int port, std::queue<Command>& queue, std::mutex& mutex,
              std::atomic<int>& cmdIndex, std::condition_variable& cv);
     ~Receiver();
-    void processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& cliaddr);
     std::string getLocalIp() const;
     void start();
     void stop();
 
 private:
     void run();
-    void process_packet(const OSCPP::Server::Packet& packet, sockaddr_in& cliaddr);
-    void track_connection(const std::string& ip, int port);
+    void processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& cliaddr);
+    void trackConnection(const std::string& ip, int port);
 
     int port_;
     int sockfd_;
@@ -54,7 +53,7 @@ private:
     std::condition_variable& cv_;
     bool running_;
     std::thread thread_;
-    std::unordered_set<std::string> connected_clients_;
+    std::unordered_map<std::string, int> client_ports_;
 };
 
 #endif
