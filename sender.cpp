@@ -48,37 +48,40 @@ void Sender::sendDone(const std::string& ip, int port, int index) {
 }
 
 void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>& queue) {
+    constexpr int RESPONSE_PORT = 12345;
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(12345);
+    addr.sin_port = htons(RESPONSE_PORT);
     inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
 
     std::array<char, 4096> buffer;
     OSCPP::Client::Packet packet(buffer.data(), buffer.size());
     
-    auto msg = packet.openMessage("/info", 1);
-    std::stringstream ss;
+    // Open message with array argument
+    auto msg = packet.openMessage("/info", OSCPP::Tags::array(queue.size()));
+    auto arr = msg.openArray();
 
     std::queue<Command> q_copy = queue;
-    if (!q_copy.empty()) {
+    while (!q_copy.empty()) {
         const Command& cmd = q_copy.front();
-        ss << "CMD #" << cmd.index << " ";
+        auto cmd_arr = arr.openArray();
+        
+        cmd_arr.int32(cmd.index)
+               .string(cmd.type == Command::ROTATE ? "rotate" :
+                       cmd.type == Command::ENABLE ? "enable" : "disable");
+        
         if (cmd.type == Command::ROTATE) {
-            ss << "ROTATE " << cmd.steps << " " << cmd.delayUs << " " << cmd.direction;
-        } else if (cmd.type == Command::ENABLE) {
-            ss << "ENABLE";
-        } else if (cmd.type == Command::DISABLE) {
-            ss << "DISABLE";
+            cmd_arr.int32(cmd.steps)
+                   .int32(cmd.delayUs)
+                   .int32(cmd.direction);
         }
-        ss << "\n";
-
+        
+        cmd_arr.closeArray();
         q_copy.pop();
     }
-    else{
-        ss << "No commands in queue";
-    }
-    msg.string(ss.str().c_str());
+    
+    arr.closeArray();
     msg.closeMessage();
 
     sendto(sock, packet.data(), packet.size(), 0,
