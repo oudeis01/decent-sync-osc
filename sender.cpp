@@ -5,6 +5,7 @@
 #include <cstring>
 #include <array>
 #include <iostream>
+#include <sstream>
 
 void Sender::print_connection_info(const std::string& ip, int port) {
     std::cout << "\n[NEW CLIENT]\n"
@@ -52,39 +53,34 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
+    addr.sin_port = htons(12345);
     inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
 
-    std::array<char, 1024> buffer;  // Use stack-allocated buffer
-    OSCPP::Client::Packet packet(buffer.data(), buffer.size());    auto msg = packet.openMessage("/info", 1);
-    auto arr = msg.openArray();
+    std::array<char, 4096> buffer;
+    OSCPP::Client::Packet packet(buffer.data(), buffer.size());
     
-    std::queue<Command> qCopy = queue;
-    while (!qCopy.empty()) {
-        const Command& cmd = qCopy.front();
-        auto cmdArr = arr.openArray();
-        cmdArr.int32(cmd.index);
-        
-        switch (cmd.type) {
-            case Command::ROTATE:
-                cmdArr.string("rotate")
-                      .int32(cmd.steps)
-                      .int32(cmd.delayUs)
-                      .int32(cmd.direction);
-                break;
-            case Command::ENABLE:
-                cmdArr.string("enable");
-                break;
-            case Command::DISABLE:
-                cmdArr.string("disable");
-                break;
+    auto msg = packet.openMessage("/info", 1);
+    std::stringstream ss;
+
+    std::queue<Command> q_copy = queue;
+    while (!q_copy.empty()) {
+        const Command& cmd = q_copy.front();
+        ss << "CMD #" << cmd.index << " ";
+        if cmd.type == Command::ROTATE {
+            ss << "ROTATE " << cmd.steps << " " << cmd.delayUs << " " << cmd.direction;
+        } else if cmd.type == Command::ENABLE {
+            ss << "ENABLE";
+        } else if cmd.type == Command::DISABLE {
+            ss << "DISABLE";
         }
-        cmdArr.closeArray();
-        qCopy.pop();
+        ss << "\n";
+
+        q_copy.pop();
     }
-    arr.closeArray();
+    msg.string(ss.str().c_str());
     msg.closeMessage();
 
-    sendto(sock, packet.data(), packet.size(), 0, (sockaddr*)&addr, sizeof(addr));
+    sendto(sock, packet.data(), packet.size(), 0,
+          reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
     close(sock);
 }

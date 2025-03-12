@@ -74,9 +74,6 @@ void Receiver::stop() {
     if (thread_.joinable()) thread_.join();
 }
 void Receiver::trackConnection(const std::string& ip, int port) {
-    const int RESPONSE_PORT = 12345;  // Fixed response port
-    
-    // Always use port 12345 for responses
     if (connected_clients_.find(ip) == connected_clients_.end()) {
         connected_clients_.insert(ip);
         Sender::print_connection_info(ip, port);  // Show actual incoming port
@@ -114,7 +111,7 @@ void Receiver::processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& c
             else if (address == "/enable") {
                 cmd.type = Command::ENABLE;
                 cmd.index = ++commandIndex_;
-                std::cout << "[CMD] ENABLE from " << cmd.senderIp << "\n";
+                std::cout << "[CMD] ENABLE from " << cmd.senderIp;
                 std::lock_guard<std::mutex> lock(queueMutex_);
                 commandQueue_.push(cmd);
                 cv_.notify_one();
@@ -122,7 +119,7 @@ void Receiver::processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& c
             else if (address == "/disable") {
                 cmd.type = Command::DISABLE;
                 cmd.index = ++commandIndex_;
-                std::cout << "[CMD] DISABLE from " << cmd.senderIp << "\n";
+                std::cout << "[CMD] DISABLE from " << cmd.senderIp;
                 std::lock_guard<std::mutex> lock(queueMutex_);
                 commandQueue_.push(cmd);
                 cv_.notify_one();
