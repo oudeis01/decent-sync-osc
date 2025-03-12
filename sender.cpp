@@ -49,8 +49,8 @@ void Sender::sendDone(const std::string& ip, int port, int index) {
               << ip << ":" << port << "\n";
 }
 
+
 void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>& queue) {
-    constexpr int RESPONSE_PORT = 12345;
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
@@ -64,48 +64,38 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
 
     if (q_copy.empty()) {
         // Case: Empty queue
-        auto msg = packet.openMessage("/info", 1); // 1 argument
-        msg.string("no commands in the queue");
-        msg.closeMessage();
+        OSCPP::Client::Message msg(packet);
+        msg.openMessage("/info", 1)
+           .string("no commands in the queue")
+           .closeMessage();
     } else {
         // Case: Non-empty queue
-        // First pass: Calculate total arguments
-        int totalArgs = 0;
-        std::queue<Command> temp = q_copy;
-        while (!temp.empty()) {
-            const Command& cmd = temp.front();
-            if (cmd.type == Command::ROTATE) {
-                totalArgs += 5; // index (i), "rotate" (s), steps (i), delay (i), direction (i)
-            } else if (cmd.type == Command::ENABLE || cmd.type == Command::DISABLE) {
-                totalArgs += 2; // index (i), "enable"/"disable" (s)
-            }
-            temp.pop();
-        }
-
-        // Second pass: Build the OSC message
-        auto msg = packet.openMessage("/info", totalArgs);
+        OSCPP::Client::Message msg(packet);
+        auto bundle = msg.openBundle(); // Use a bundle to send multiple messages
         while (!q_copy.empty()) {
             const Command& cmd = q_copy.front();
-            msg.int32(cmd.index); // Add command index (int32)
+            auto cmdMsg = bundle.openMessage("/info", 0);
+            cmdMsg.int32(cmd.index);
             switch (cmd.type) {
                 case Command::ROTATE:
-                    msg.string("rotate")       // Add type (string)
-                       .int32(cmd.steps)       // Steps (int32)
-                       .int32(cmd.delayUs)     // Delay (int32)
-                       .int32(cmd.direction); // Direction (int32)
+                    cmdMsg.string("rotate")
+                          .int32(cmd.steps)
+                          .int32(cmd.delayUs)
+                          .int32(cmd.direction);
                     break;
                 case Command::ENABLE:
-                    msg.string("enable"); // Type (string)
+                    cmdMsg.string("enable");
                     break;
                 case Command::DISABLE:
-                    msg.string("disable"); // Type (string)
+                    cmdMsg.string("disable");
                     break;
                 case Command::INFO:
-                    break; // Skip INFO commands
+                    break;
             }
+            cmdMsg.closeMessage();
             q_copy.pop();
         }
-        msg.closeMessage();
+        bundle.close();
     }
 
     sendto(sock, packet.data(), packet.size(), 0,
