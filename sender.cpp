@@ -63,32 +63,45 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
     std::queue<Command> q_copy = queue;
 
     if (q_copy.empty()) {
-        // Send "no commands" response
+        // Case: Empty queue
         auto msg = packet.openMessage("/info", 1); // 1 argument
         msg.string("no commands in the queue");
         msg.closeMessage();
     } else {
-        // Send command list
-        auto msg = packet.openMessage("/info", 0); // Dynamic argument count
+        // Case: Non-empty queue
+        // First pass: Calculate total arguments
+        int totalArgs = 0;
+        std::queue<Command> temp = q_copy;
+        while (!temp.empty()) {
+            const Command& cmd = temp.front();
+            if (cmd.type == Command::ROTATE) {
+                totalArgs += 5; // index (i), "rotate" (s), steps (i), delay (i), direction (i)
+            } else if (cmd.type == Command::ENABLE || cmd.type == Command::DISABLE) {
+                totalArgs += 2; // index (i), "enable"/"disable" (s)
+            }
+            temp.pop();
+        }
+
+        // Second pass: Build the OSC message
+        auto msg = packet.openMessage("/info", totalArgs);
         while (!q_copy.empty()) {
             const Command& cmd = q_copy.front();
-            
-            msg.int32(cmd.index);
+            msg.int32(cmd.index); // Add command index (int32)
             switch (cmd.type) {
                 case Command::ROTATE:
-                    msg.string("rotate")
-                       .int32(cmd.steps)
-                       .int32(cmd.delayUs)
-                       .int32(cmd.direction);
+                    msg.string("rotate")       // Add type (string)
+                       .int32(cmd.steps)       // Steps (int32)
+                       .int32(cmd.delayUs)     // Delay (int32)
+                       .int32(cmd.direction); // Direction (int32)
                     break;
                 case Command::ENABLE:
-                    msg.string("enable");
+                    msg.string("enable"); // Type (string)
                     break;
                 case Command::DISABLE:
-                    msg.string("disable");
+                    msg.string("disable"); // Type (string)
                     break;
                 case Command::INFO:
-                    break; // Skip
+                    break; // Skip INFO commands
             }
             q_copy.pop();
         }
