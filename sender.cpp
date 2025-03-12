@@ -58,30 +58,31 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
     std::array<char, 4096> buffer;
     OSCPP::Client::Packet packet(buffer.data(), buffer.size());
     
-    // Open message with array argument
-    auto msg = packet.openMessage("/info", OSCPP::Tags::array(queue.size()));
-    auto arr = msg.openArray();
+    // Start message with array argument
+    auto msg = packet.openMessage("/info", OSCPP::Tags::array());
+    auto main_array = msg.openArray();
 
     std::queue<Command> q_copy = queue;
     while (!q_copy.empty()) {
         const Command& cmd = q_copy.front();
-        auto cmd_arr = arr.openArray();
         
-        cmd_arr.int32(cmd.index)
-               .string(cmd.type == Command::ROTATE ? "rotate" :
-                       cmd.type == Command::ENABLE ? "enable" : "disable");
+        // Create nested array for each command
+        auto cmd_array = main_array.openArray();
+        cmd_array.int32(cmd.index)
+                 .string(cmd.type == Command::ROTATE ? "rotate" :
+                         cmd.type == Command::ENABLE ? "enable" : "disable");
         
         if (cmd.type == Command::ROTATE) {
-            cmd_arr.int32(cmd.steps)
-                   .int32(cmd.delayUs)
-                   .int32(cmd.direction);
+            cmd_array.int32(cmd.steps)
+                      .int32(cmd.delayUs)
+                      .int32(cmd.direction);
         }
         
-        cmd_arr.closeArray();
+        cmd_array.closeArray();
         q_copy.pop();
     }
-    
-    arr.closeArray();
+
+    main_array.closeArray();
     msg.closeMessage();
 
     sendto(sock, packet.data(), packet.size(), 0,
