@@ -49,40 +49,47 @@ void Sender::sendDone(const std::string& ip, int port, int index) {
 
 void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>& queue) {
     constexpr int RESPONSE_PORT = 12345;
+    constexpr size_t BUFFER_SIZE = 8192;  // Increased buffer size
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(RESPONSE_PORT);
     inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
 
-    std::array<char, 4096> buffer;
+    std::array<char, BUFFER_SIZE> buffer;
     OSCPP::Client::Packet packet(buffer.data(), buffer.size());
     
-    // Start message with array argument
-    auto msg = packet.openMessage("/info", 1);
-    auto main_array = msg.openArray();
-
+    // Calculate array element count (3 elements per rotate command)
+    size_t elem_count = 0;
     std::queue<Command> q_copy = queue;
     while (!q_copy.empty()) {
-        const Command& cmd = q_copy.front();
-        
-        // Create nested array for each command
-        auto cmd_array = main_array.openArray();
-        cmd_array.int32(cmd.index)
-                 .string(cmd.type == Command::ROTATE ? "rotate" :
-                         cmd.type == Command::ENABLE ? "enable" : "disable");
-        
-        if (cmd.type == Command::ROTATE) {
-            cmd_array.int32(cmd.steps)
-                      .int32(cmd.delayUs)
-                      .int32(cmd.direction);
-        }
-        
-        cmd_array.closeArray();
+        elem_count += (q_copy.front().type == Command::ROTATE) ? 5 : 2;
         q_copy.pop();
     }
 
-    main_array.closeArray();
+    auto msg = packet.openMessage("/info", OSCPP::Tags::array(elem_count));
+    auto arr = msg.openArray();
+
+    q_copy = queue;
+    while (!q_copy.empty()) {
+        const Command& cmd = q_copy.front();
+        auto cmd_arr = arr.openArray();
+        
+        cmd_arr.int32(cmd.index)
+               .string(cmd.type == Command::ROTATE ? "rotate" :
+                       cmd.type == Command::ENABLE ? "enable" : "disable");
+        
+        if (cmd.type == Command::ROTATE) {
+            cmd_arr.int32(cmd.steps)
+                   .int32(cmd.delayUs)
+                   .int32(cmd.direction);
+        }
+        
+        cmd_arr.closeArray();
+        q_copy.pop();
+    }
+    
+    arr.closeArray();
     msg.closeMessage();
 
     sendto(sock, packet.data(), packet.size(), 0,
