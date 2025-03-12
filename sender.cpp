@@ -4,6 +4,14 @@
 #include <unistd.h>
 #include <cstring>
 #include <array>
+#include <iostream>
+
+void Sender::print_connection_info(const std::string& ip, int port) {
+    std::cout << "Established connection to: " << ip << ":" << port << "\n";
+    std::cout << "Available commands:\n";
+    std::cout << "  /rotate <steps> <delay_us> <direction(0|1)>\n";
+    std::cout << "  /enable\n  /disable\n  /info\n";
+}
 
 void Sender::sendAck(const std::string& ip, int port, int index) {
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -12,12 +20,14 @@ void Sender::sendAck(const std::string& ip, int port, int index) {
     addr.sin_port = htons(port);
     inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
 
-    std::array<char, 1024> buffer;  // Use stack-allocated buffer
+    std::array<char, 1024> buffer;
     OSCPP::Client::Packet packet(buffer.data(), buffer.size());
     packet.openMessage("/ack", 1).int32(index).closeMessage();
 
     sendto(sock, packet.data(), packet.size(), 0, (sockaddr*)&addr, sizeof(addr));
     close(sock);
+    
+    print_connection_info(ip, port);
 }
 
 void Sender::sendDone(const std::string& ip, int port, int index) {

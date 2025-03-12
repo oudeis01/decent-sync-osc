@@ -32,8 +32,8 @@ public:
     Receiver(int port, std::queue<Command>& queue, std::mutex& mutex,
              std::atomic<int>& cmdIndex, std::condition_variable& cv);
     ~Receiver();
-    void processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& cliaddr);    
-
+    void processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& cliaddr);
+    std::string get_local_ip() const;
     void start();
     void stop();
 

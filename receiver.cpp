@@ -23,12 +23,27 @@ Receiver::~Receiver() {
     stop();
     close(sockfd_);
 }
+std::string Receiver::get_local_ip() const {
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    sockaddr_in serv{};
+    serv.sin_family = AF_INET;
+    serv.sin_addr.s_addr = INADDR_LOOPBACK;
+    socklen_t len = sizeof(serv);
+    getsockname(sock, (sockaddr*)&serv, &len);
+    close(sock);
+    return inet_ntoa(serv.sin_addr);
+}
 
 void Receiver::start() {
     running_ = true;
     thread_ = std::thread(&Receiver::run, this);
+    
+    std::cout << "OSC Server started\n";
+    std::cout << "Listening on: " << get_local_ip() << ":" << port_ << "\n";
+    std::cout << "Supported commands:\n";
+    std::cout << "  /rotate <steps> <delay_us> <direction(0|1)>\n";
+    std::cout << "  /enable\n  /disable\n  /info\n";
 }
-
 void Receiver::stop() {
     running_ = false;
     if (thread_.joinable()) thread_.join();
@@ -75,6 +90,7 @@ void Receiver::processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& c
 
         Sender sender;
         sender.sendAck(cmd.senderIp, cmd.senderPort, cmd.index);
+        std::cout << "New connection from: " << cmd.senderIp << ":" << cmd.senderPort << "\n";
     }
 }
 

@@ -3,21 +3,21 @@
 int main() {
     if (gpioInitialise() < 0) return 1;
 
-    std::queue<Command> cmdQueue;
-    std::mutex queueMutex;
+    std::queue<Command> cmd_queue;
+    std::mutex queue_mutex;
     std::condition_variable cv;
-    std::atomic<int> cmdIndex(0);
+    std::atomic<int> cmd_index(0);
 
     Motor motor(EN_PIN, DIR_PIN, STEP_PIN);
-    Receiver receiver(9000, cmdQueue, queueMutex, cmdIndex, cv);
+    Receiver receiver(9000, cmd_queue, queue_mutex, cmd_index, cv);
     receiver.start();
 
     while (true) {
-        std::unique_lock<std::mutex> lock(queueMutex);
-        cv.wait(lock, [&cmdQueue]{ return !cmdQueue.empty(); });
+        std::unique_lock<std::mutex> lock(queue_mutex);
+        cv.wait(lock, [&cmd_queue]{ return !cmd_queue.empty(); });
 
-        Command cmd = cmdQueue.front();
-        cmdQueue.pop();
+        Command cmd = cmd_queue.front();
+        cmd_queue.pop();
         lock.unlock();
 
         switch (cmd.type) {
