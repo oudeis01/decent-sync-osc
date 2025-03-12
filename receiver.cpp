@@ -127,11 +127,11 @@ void Receiver::processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& c
             else if (address == "/info") {
                 cmd.type = Command::INFO;
                 Sender sender;
+                sender.sendInfo(cmd.senderIp, 12345, commandQueue_);
                 std::cout << "[CMD] INFO from " << cmd.senderIp;
                 std::lock_guard<std::mutex> lock(queueMutex_);
                 commandQueue_.push(cmd);
                 cv_.notify_one();
-                sender.sendInfo(cmd.senderIp, 12345, commandQueue_);
                 return;
             }
 
