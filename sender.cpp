@@ -63,7 +63,7 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
     std::stringstream ss;
 
     std::queue<Command> q_copy = queue;
-    while (!q_copy.empty()) {
+    if (!q_copy.empty()) {
         const Command& cmd = q_copy.front();
         ss << "CMD #" << cmd.index << " ";
         if (cmd.type == Command::ROTATE) {
@@ -76,6 +76,9 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
         ss << "\n";
 
         q_copy.pop();
+    }
+    else{
+        ss << "No commands in queue\n";
     }
     msg.string(ss.str().c_str());
     msg.closeMessage();
