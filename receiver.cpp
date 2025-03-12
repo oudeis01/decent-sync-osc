@@ -6,6 +6,8 @@
 #include <cstring>
 #include <thread>
 #include <iostream>
+#include <ifaddrs.h>
+#include <sys/socket.h>
 
 Receiver::Receiver(int port, std::queue<Command>& queue, std::mutex& mutex,
                    std::atomic<int>& cmdIndex, std::condition_variable& cv)
@@ -31,20 +33,20 @@ std::string Receiver::getLocalIp() const {
         return local_ip;
     }
 
-    // Walk through linked list of interfaces
     for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
         if (ifa->ifa_addr == nullptr) continue;
         
-        // Check for IPv4 interface
+        // IPv4 only
         if (ifa->ifa_addr->sa_family == AF_INET) {
-            struct sockaddr_in* addr = (struct sockaddr_in*)ifa->ifa_addr;
+            struct sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(ifa->ifa_addr);
             char ip[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &addr->sin_addr, ip, INET_ADDRSTRLEN);
             
-            // Skip localhost and docker interfaces
+            // Skip loopback and virtual interfaces
             if (strcmp(ifa->ifa_name, "lo") != 0 && 
                 strncmp(ifa->ifa_name, "docker", 6) != 0 &&
-                strncmp(ifa->ifa_name, "br-", 3) != 0) {
+                strncmp(ifa->ifa_name, "br-", 3) != 0 &&
+                strncmp(ifa->ifa_name, "veth", 4) != 0) {
                 local_ip = ip;
                 break;
             }
@@ -53,6 +55,7 @@ std::string Receiver::getLocalIp() const {
 
     freeifaddrs(ifaddr);
     return local_ip;
+
 }
 
 void Receiver::start() {

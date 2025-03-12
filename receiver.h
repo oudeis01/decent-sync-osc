@@ -8,6 +8,9 @@
 #include <netinet/in.h>
 #include <condition_variable>
 #include <thread>  // Add missing include
+#include <iostream>
+#include <ifaddrs.h>
+#include <sys/socket.h>
 
 // Forward declaration
 namespace OSCPP {
