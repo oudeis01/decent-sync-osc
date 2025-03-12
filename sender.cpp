@@ -60,26 +60,31 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
     std::array<char, MAX_BUFFER_SIZE> buffer;
     OSCPP::Client::Packet packet(buffer.data(), buffer.size());
     
-    // Open message with 1 argument (the array)
     auto msg = packet.openMessage("/info", 1);
-    auto main_array = msg.openArray();  // Array type is automatic
+    auto main_array = msg.openArray();
 
     std::queue<Command> q_copy = queue;
     while (!q_copy.empty()) {
         const Command& cmd = q_copy.front();
         
-        // Create nested array for each command
-        auto cmd_entry = main_array.openArray();
-        cmd_entry.int32(cmd.index)
-                 .string(cmd.type == Command::ROTATE ? "rotate" : 
-                         cmd.type == Command::ENABLE ? "enable" : "disable");
-        
-        if (cmd.type == Command::ROTATE) {
-            cmd_entry.int32(cmd.steps)
-                     .int32(cmd.delayUs)
-                     .int32(cmd.direction);
+        main_array.int32(cmd.index);
+        switch (cmd.type) {
+            case Command::ROTATE:
+                main_array.string("rotate")
+                         .int32(cmd.steps)
+                         .int32(cmd.delayUs)
+                         .int32(cmd.direction);
+                break;
+            case Command::ENABLE:
+                main_array.string("enable");
+                break;
+            case Command::DISABLE:
+                main_array.string("disable");
+                break;
+            case Command::INFO:
+                // INFO commands shouldn't be in the queue; skip if present
+                break;
         }
-        cmd_entry.closeArray();
         
         q_copy.pop();
     }
