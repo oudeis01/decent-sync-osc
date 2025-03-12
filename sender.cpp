@@ -78,7 +78,7 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
         q_copy.pop();
     }
     else{
-        ss << "No commands in queue\n";
+        ss << "No commands in queue";
     }
     msg.string(ss.str().c_str());
     msg.closeMessage();
