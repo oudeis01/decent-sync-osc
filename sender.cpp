@@ -51,14 +51,13 @@ void Sender::sendDone(const std::string& ip, int port, int index) {
 
 void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>& queue) {
     constexpr int RESPONSE_PORT = 12345;
-    constexpr size_t BUFFER_SIZE = 8192;
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(RESPONSE_PORT);
     inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
 
-    std::array<char, BUFFER_SIZE> buffer;
+    std::array<char, MAX_BUFFER_SIZE> buffer;
     OSCPP::Client::Packet packet(buffer.data(), buffer.size());
     
     // Open message with 1 argument (the array)
