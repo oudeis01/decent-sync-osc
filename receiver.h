@@ -33,7 +33,7 @@ public:
              std::atomic<int>& cmdIndex, std::condition_variable& cv);
     ~Receiver();
     void processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& cliaddr);
-    std::string get_local_ip() const;
+    std::string getLocalIp() const;
     void start();
     void stop();
 

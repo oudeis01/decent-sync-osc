@@ -23,15 +23,36 @@ Receiver::~Receiver() {
     stop();
     close(sockfd_);
 }
-std::string Receiver::get_local_ip() const {
-    int sock = socket(AF_INET, SOCK_DGRAM, 0);
-    sockaddr_in serv{};
-    serv.sin_family = AF_INET;
-    serv.sin_addr.s_addr = INADDR_LOOPBACK;
-    socklen_t len = sizeof(serv);
-    getsockname(sock, (sockaddr*)&serv, &len);
-    close(sock);
-    return inet_ntoa(serv.sin_addr);
+std::string Receiver::getLocalIp() const {
+    std::string local_ip = "0.0.0.0";
+    struct ifaddrs *ifaddr, *ifa;
+    
+    if (getifaddrs(&ifaddr) == -1) {
+        return local_ip;
+    }
+
+    // Walk through linked list of interfaces
+    for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == nullptr) continue;
+        
+        // Check for IPv4 interface
+        if (ifa->ifa_addr->sa_family == AF_INET) {
+            struct sockaddr_in* addr = (struct sockaddr_in*)ifa->ifa_addr;
+            char ip[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &addr->sin_addr, ip, INET_ADDRSTRLEN);
+            
+            // Skip localhost and docker interfaces
+            if (strcmp(ifa->ifa_name, "lo") != 0 && 
+                strncmp(ifa->ifa_name, "docker", 6) != 0 &&
+                strncmp(ifa->ifa_name, "br-", 3) != 0) {
+                local_ip = ip;
+                break;
+            }
+        }
+    }
+
+    freeifaddrs(ifaddr);
+    return local_ip;
 }
 
 void Receiver::start() {
@@ -39,7 +60,7 @@ void Receiver::start() {
     thread_ = std::thread(&Receiver::run, this);
     
     std::cout << "OSC Server started\n";
-    std::cout << "Listening on: " << get_local_ip() << ":" << port_ << "\n";
+    std::cout << "Listening on: " << getLocalIp() << ":" << port_ << "\n";
     std::cout << "Supported commands:\n";
     std::cout << "  /rotate <steps> <delay_us> <direction(0|1)>\n";
     std::cout << "  /enable\n  /disable\n  /info\n";
