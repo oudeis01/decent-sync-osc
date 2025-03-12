@@ -4,6 +4,8 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <cstring>
+#include <thread>
+#include <iostream>
 
 Receiver::Receiver(int port, std::queue<Command>& queue, std::mutex& mutex,
                    std::atomic<int>& cmdIndex, std::condition_variable& cv)

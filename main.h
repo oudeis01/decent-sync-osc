@@ -1,5 +1,6 @@
 #include "motor.h"
 #include "receiver.h"
+#include "sender.h"
 #include <pigpio.h>
 #include <queue>
 #include <mutex>

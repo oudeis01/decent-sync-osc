@@ -7,6 +7,14 @@
 #include <string>
 #include <netinet/in.h>
 #include <condition_variable>
+#include <thread>  // Add missing include
+
+// Forward declaration
+namespace OSCPP {
+namespace Server {
+    class Packet;
+}
+}
 
 struct Command {
     int index;
@@ -18,18 +26,19 @@ struct Command {
     bool direction;
 };
 
+
 class Receiver {
 public:
     Receiver(int port, std::queue<Command>& queue, std::mutex& mutex,
              std::atomic<int>& cmdIndex, std::condition_variable& cv);
     ~Receiver();
+    void processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& cliaddr);    
+
     void start();
     void stop();
 
 private:
     void run();
-    void processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& cliaddr);
-    
     int port_;
     int sockfd_;
     std::queue<Command>& commandQueue_;

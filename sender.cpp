@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <cstring>
+#include <array>
 
 void Sender::sendAck(const std::string& ip, int port, int index) {
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -11,7 +12,8 @@ void Sender::sendAck(const std::string& ip, int port, int index) {
     addr.sin_port = htons(port);
     inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
 
-    OSCPP::Client::Packet packet(1024);
+    std::array<char, 1024> buffer;  // Use stack-allocated buffer
+    OSCPP::Client::Packet packet(buffer.data(), buffer.size());
     packet.openMessage("/ack", 1).int32(index).closeMessage();
 
     sendto(sock, packet.data(), packet.size(), 0, (sockaddr*)&addr, sizeof(addr));
@@ -25,7 +27,8 @@ void Sender::sendDone(const std::string& ip, int port, int index) {
     addr.sin_port = htons(port);
     inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
 
-    OSCPP::Client::Packet packet(1024);
+    std::array<char, 1024> buffer;  // Use stack-allocated buffer
+    OSCPP::Client::Packet packet(buffer.data(), buffer.size());
     packet.openMessage("/done", 1).int32(index).closeMessage();
 
     sendto(sock, packet.data(), packet.size(), 0, (sockaddr*)&addr, sizeof(addr));
@@ -39,8 +42,8 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
     addr.sin_port = htons(port);
     inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
 
-    OSCPP::Client::Packet packet(4096);
-    auto msg = packet.openMessage("/info", 1);
+    std::array<char, 1024> buffer;  // Use stack-allocated buffer
+    OSCPP::Client::Packet packet(buffer.data(), buffer.size());    auto msg = packet.openMessage("/info", 1);
     auto arr = msg.openArray();
     
     std::queue<Command> qCopy = queue;
