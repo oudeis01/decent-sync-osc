@@ -36,7 +36,7 @@ void Receiver::stop() {
 
 void Receiver::processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& cliaddr) {
     if (packet.isMessage()) {
-        OSCPP::Server::Message msg = packet.getMessage();
+        OSCPP::Server::Message msg(packet);
         std::string address = msg.address();
 
         Command cmd{};
