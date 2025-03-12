@@ -27,8 +27,6 @@ void Sender::sendAck(const std::string& ip, int port, int index) {
 
     sendto(sock, packet.data(), packet.size(), 0, (sockaddr*)&addr, sizeof(addr));
     close(sock);
-    
-    print_connection_info(ip, port);
 }
 
 void Sender::sendDone(const std::string& ip, int port, int index) {
