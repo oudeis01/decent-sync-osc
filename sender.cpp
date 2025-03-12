@@ -13,10 +13,11 @@ void Sender::print_connection_info(const std::string& ip, int port) {
 }
 
 void Sender::sendAck(const std::string& ip, int port, int index) {
+    const int RESPONSE_PORT = 12345;
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
+    addr.sin_port = htons(RESPONSE_PORT);
     inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
 
     std::array<char, 1024> buffer;

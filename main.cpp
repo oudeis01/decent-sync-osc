@@ -49,6 +49,8 @@ int main() {
 
         Sender sender;
         sender.sendDone(cmd.senderIp, cmd.senderPort, cmd.index);
+        std::cout << "Completed command #" << cmd.index << " for "
+          << cmd.senderIp << ":12345\n";
     }
 
     receiver.stop();

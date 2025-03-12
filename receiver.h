@@ -11,7 +11,7 @@
 #include <iostream>
 #include <ifaddrs.h>
 #include <sys/socket.h>
-#include <unordered_map>
+#include <unordered_set>
 
 // Forward declaration
 namespace OSCPP {
@@ -53,7 +53,6 @@ private:
     std::condition_variable& cv_;
     bool running_;
     std::thread thread_;
-    std::unordered_map<std::string, int> client_ports_;
+    std::unordered_set<std::string> connected_clients_;
 };
-
 #endif

@@ -74,14 +74,12 @@ void Receiver::stop() {
     if (thread_.joinable()) thread_.join();
 }
 void Receiver::trackConnection(const std::string& ip, int port) {
-    auto it = client_ports_.find(ip);
-    if (it == client_ports_.end()) {
-        client_ports_[ip] = port;
-        Sender::print_connection_info(ip, port);
-    }
-    else if (it->second != port) {
-        std::cout << "Client " << ip << " reconnected from new port: " << port << "\n";
-        it->second = port;
+    const int RESPONSE_PORT = 12345;  // Fixed response port
+    
+    // Always use port 12345 for responses
+    if (connected_clients_.find(ip) == connected_clients_.end()) {
+        connected_clients_.insert(ip);
+        Sender::print_connection_info(ip, port);  // Show actual incoming port
     }
 }
 
@@ -138,7 +136,7 @@ void Receiver::processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& c
             }
 
             Sender sender;
-            sender.sendAck(cmd.senderIp, cmd.senderPort, cmd.index);
+            sender.sendAck(cmd.senderIp, 12345, cmd.index);
         }
         catch (const std::exception& e) {
             std::cerr << "[ERROR] From " << cmd.senderIp 
