@@ -66,11 +66,11 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
     while (!q_copy.empty()) {
         const Command& cmd = q_copy.front();
         ss << "CMD #" << cmd.index << " ";
-        if cmd.type == Command::ROTATE {
+        if (cmd.type == Command::ROTATE) {
             ss << "ROTATE " << cmd.steps << " " << cmd.delayUs << " " << cmd.direction;
-        } else if cmd.type == Command::ENABLE {
+        } else if (cmd.type == Command::ENABLE) {
             ss << "ENABLE";
-        } else if cmd.type == Command::DISABLE {
+        } else if (cmd.type == Command::DISABLE) {
             ss << "DISABLE";
         }
         ss << "\n";
