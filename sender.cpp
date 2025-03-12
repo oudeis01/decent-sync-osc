@@ -59,37 +59,41 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
 
     std::array<char, MAX_BUFFER_SIZE> buffer;
     OSCPP::Client::Packet packet(buffer.data(), buffer.size());
-    
-    // Open message with dynamic arguments (no array)
-    auto msg = packet.openMessage("/info", 0); // Argument count adjusted dynamically
 
     std::queue<Command> q_copy = queue;
-    while (!q_copy.empty()) {
-        const Command& cmd = q_copy.front();
-        
-        // Add command data directly to the message
-        msg.int32(cmd.index);
-        switch (cmd.type) {
-            case Command::ROTATE:
-                msg.string("rotate")
-                   .int32(cmd.steps)
-                   .int32(cmd.delayUs)
-                   .int32(cmd.direction);
-                break;
-            case Command::ENABLE:
-                msg.string("enable");
-                break;
-            case Command::DISABLE:
-                msg.string("disable");
-                break;
-            case Command::INFO:
-                break; // Skip INFO commands
-        }
-        
-        q_copy.pop();
-    }
 
-    msg.closeMessage();
+    if (q_copy.empty()) {
+        // Send "no commands" response
+        auto msg = packet.openMessage("/info", 1); // 1 argument
+        msg.string("no commands in the queue");
+        msg.closeMessage();
+    } else {
+        // Send command list
+        auto msg = packet.openMessage("/info", 0); // Dynamic argument count
+        while (!q_copy.empty()) {
+            const Command& cmd = q_copy.front();
+            
+            msg.int32(cmd.index);
+            switch (cmd.type) {
+                case Command::ROTATE:
+                    msg.string("rotate")
+                       .int32(cmd.steps)
+                       .int32(cmd.delayUs)
+                       .int32(cmd.direction);
+                    break;
+                case Command::ENABLE:
+                    msg.string("enable");
+                    break;
+                case Command::DISABLE:
+                    msg.string("disable");
+                    break;
+                case Command::INFO:
+                    break; // Skip
+            }
+            q_copy.pop();
+        }
+        msg.closeMessage();
+    }
 
     sendto(sock, packet.data(), packet.size(), 0,
           reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
