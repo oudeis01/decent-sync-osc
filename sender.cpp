@@ -51,6 +51,7 @@ void Sender::sendDone(const std::string& ip, int port, int index) {
 
 
 void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>& queue) {
+    constexpr int RESPONSE_PORT = 12345;
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
@@ -63,19 +64,20 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
     std::queue<Command> q_copy = queue;
 
     if (q_copy.empty()) {
-        // Case: Empty queue
-        OSCPP::Client::Message msg(packet);
-        msg.openMessage("/info", 1)
-           .string("no commands in the queue")
-           .closeMessage();
+        // Empty queue case
+        auto msg = packet.openMessage("/info", 1);
+        msg.string("no commands in the queue");
+        msg.closeMessage();
     } else {
-        // Case: Non-empty queue
-        OSCPP::Client::Message msg(packet);
-        auto bundle = msg.openBundle(); // Use a bundle to send multiple messages
+        // Non-empty queue: use bundle with timestamp
+        auto bundle = packet.openBundle(0ULL); // <-- 0 = immediate execution timestamp
         while (!q_copy.empty()) {
             const Command& cmd = q_copy.front();
+            
+            // Create message for each command
             auto cmdMsg = bundle.openMessage("/info", 0);
             cmdMsg.int32(cmd.index);
+            
             switch (cmd.type) {
                 case Command::ROTATE:
                     cmdMsg.string("rotate")
@@ -90,7 +92,7 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
                     cmdMsg.string("disable");
                     break;
                 case Command::INFO:
-                    break;
+                    break; // Skip
             }
             cmdMsg.closeMessage();
             q_copy.pop();
