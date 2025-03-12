@@ -1,34 +1,43 @@
-#pragma once
-#include "oscpp/client.hpp"
-#include "oscpp/server.hpp"
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <cstring>
-#include <iostream>
+#ifndef RECEIVER_H
+#define RECEIVER_H
+
 #include <queue>
-#include <thread>
 #include <mutex>
+#include <atomic>
+#include <string>
+#include <netinet/in.h>
 #include <condition_variable>
-#include "motor.h"
 
-#define PORT 8000
+struct Command {
+    int index;
+    std::string senderIp;
+    int senderPort;
+    enum Type { ROTATE, ENABLE, DISABLE } type;
+    int steps;
+    int delayUs;
+    bool direction;
+};
 
-class OSCReceiver {
+class Receiver {
 public:
-    explicit OSCReceiver(MotorController& motorController);
-    ~OSCReceiver();
-
+    Receiver(int port, std::queue<Command>& queue, std::mutex& mutex,
+             std::atomic<int>& cmdIndex, std::condition_variable& cv);
+    ~Receiver();
     void start();
     void stop();
 
 private:
-    void setupSocket();
-    void receiveAndProcessMessage();
-    void processMessage(const OSCPP::Server::Message& msg);
-
-    MotorController& motorController_;
+    void run();
+    void processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& cliaddr);
+    
+    int port_;
     int sockfd_;
+    std::queue<Command>& commandQueue_;
+    std::mutex& queueMutex_;
+    std::atomic<int>& commandIndex_;
+    std::condition_variable& cv_;
     bool running_;
+    std::thread thread_;
 };
+
+#endif

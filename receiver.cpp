@@ -1,120 +1,103 @@
 #include "receiver.h"
-#include "oscpp/server.hpp"
-#include <sstream>
+#include "sender.h"
+#include <oscpp/server.hpp>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <cstring>
 
-#ifdef PI_ZERO
-#include <pigpio.h>
-#endif
-
-// Constructor
-OSCReceiver::OSCReceiver(MotorController& motorController)
-    : motorController_(motorController), running_(true), sockfd_(-1) {
-    setupSocket();
-}
-
-// Destructor
-OSCReceiver::~OSCReceiver() {
-    stop();
-    if (sockfd_ != -1) close(sockfd_);
-}
-
-void OSCReceiver::start() {
-    std::stringstream ss;
-    ss << "OSC Receiver thread: " << std::this_thread::get_id() << '\n'
-       << "OSC Receiving on port: " << PORT << '\n'
-       << "Format: /motor/rotate <steps> <delay> <direction>\n"
-       << "        /disable\n";
-    std::cout << ss.str();
-    
-    while (running_) {
-        receiveAndProcessMessage();
-    }
-}
-
-void OSCReceiver::stop() {
-    running_ = false;
-    // Close socket to interrupt recvfrom
-    if (sockfd_ != -1) {
-        shutdown(sockfd_, SHUT_RDWR);
-        close(sockfd_);
-        sockfd_ = -1;
-    }
-}
-
-void OSCReceiver::setupSocket() {
+Receiver::Receiver(int port, std::queue<Command>& queue, std::mutex& mutex,
+                   std::atomic<int>& cmdIndex, std::condition_variable& cv)
+    : port_(port), commandQueue_(queue), queueMutex_(mutex),
+      commandIndex_(cmdIndex), cv_(cv), running_(false) {
     sockfd_ = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd_ < 0) {
-        throw std::runtime_error("Error opening socket");
-    }
-
-    struct sockaddr_in serv_addr;
-    memset(&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(PORT);
-
-    if (bind(sockfd_, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-        throw std::runtime_error("Error binding socket");
-    }
+    sockaddr_in servaddr{};
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = INADDR_ANY;
+    servaddr.sin_port = htons(port_);
+    bind(sockfd_, (sockaddr*)&servaddr, sizeof(servaddr));
 }
-void OSCReceiver::processMessage(const OSCPP::Server::Message& msg) {
-    const std::string address = msg.address();
-    OSCPP::Server::ArgStream args(msg.args());
-    
-    if (address == "/motor/rotate") {
-        if (args.size() >= 3) {  // Use count() instead of remaining()
-            MotorController::MotorCommand cmd;
+
+Receiver::~Receiver() {
+    stop();
+    close(sockfd_);
+}
+
+void Receiver::start() {
+    running_ = true;
+    thread_ = std::thread(&Receiver::run, this);
+}
+
+void Receiver::stop() {
+    running_ = false;
+    if (thread_.joinable()) thread_.join();
+}
+
+void Receiver::processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& cliaddr) {
+    if (packet.isMessage()) {
+        OSCPP::Server::Message msg = packet.getMessage();
+        std::string address = msg.address();
+
+        Command cmd{};
+        cmd.senderIp = inet_ntoa(cliaddr.sin_addr);
+        cmd.senderPort = ntohs(cliaddr.sin_port);
+
+        if (address == "/rotate") {
+            OSCPP::Server::ArgStream args = msg.args();
+            cmd.type = Command::ROTATE;
             cmd.steps = args.int32();
-            cmd.delay = args.float32();
-            cmd.direction = args.int32() > 0;
-            motorController_.queueCommand(cmd);
+            cmd.delayUs = args.int32();
+            cmd.direction = args.int32();
+            cmd.index = ++commandIndex_;
+
+            std::lock_guard<std::mutex> lock(queueMutex_);
+            commandQueue_.push(cmd);
+            cv_.notify_one();
+        } else if (address == "/enable") {
+            cmd.type = Command::ENABLE;
+            cmd.index = ++commandIndex_;
+            std::lock_guard<std::mutex> lock(queueMutex_);
+            commandQueue_.push(cmd);
+            cv_.notify_one();
+        } else if (address == "/disable") {
+            cmd.type = Command::DISABLE;
+            cmd.index = ++commandIndex_;
+            std::lock_guard<std::mutex> lock(queueMutex_);
+            commandQueue_.push(cmd);
+            cv_.notify_one();
+        } else if (address == "/info") {
+            Sender sender;
+            std::lock_guard<std::mutex> lock(queueMutex_);
+            sender.sendInfo(cmd.senderIp, cmd.senderPort, commandQueue_);
+            return;
         }
-    }
-    else if (address == "/disable") {
-        std::cout << "Received disable command\n";
-        MotorController::MotorCommand cmd;
-        cmd.disable = true;
-        // #ifdef PI_ZERO
-        gpioWrite(EN_PIN, 1);
-        // #endif
-        motorController_.queueCommand(cmd);
-    }
-    else if (address == "/enable") {
-        std::cout << "Received enable command\n";
-        MotorController::MotorCommand cmd;
-        cmd.disable = true;
-        // #ifdef PI_ZERO
-        gpioWrite(EN_PIN, 0);
-        // #endif
-        motorController_.queueCommand(cmd);
+
+        Sender sender;
+        sender.sendAck(cmd.senderIp, cmd.senderPort, cmd.index);
     }
 }
 
-void OSCReceiver::receiveAndProcessMessage() {
-    char buffer[1024];
-    struct sockaddr_in remote_addr;
-    socklen_t remote_len = sizeof(remote_addr);
-    
-    int n = recvfrom(sockfd_, buffer, sizeof(buffer), 0,
-                   (struct sockaddr *)&remote_addr, &remote_len);
-    
-    if (n < 0) {
-        if (running_) std::cerr << "Error in recvfrom\n";
-        return;
-    }
+void Receiver::run() {
+    sockaddr_in cliaddr{};
+    socklen_t len = sizeof(cliaddr);
+    char buffer[8192];
 
-    try {
-        OSCPP::Server::Packet packet(buffer, n);
-        if (packet.isBundle()) {
-            OSCPP::Server::Bundle bundle(packet);
-            OSCPP::Server::PacketStream packets(bundle.packets());
-            while (!packets.atEnd()) {
-                processMessage(OSCPP::Server::Message(packets.next()));
+    while (running_) {
+        ssize_t n = recvfrom(sockfd_, buffer, sizeof(buffer), 0, (sockaddr*)&cliaddr, &len);
+        if (n > 0) {
+            try {
+                OSCPP::Server::Packet packet(buffer, n);
+                if (packet.isBundle()) {
+                    OSCPP::Server::Bundle bundle(packet);
+                    OSCPP::Server::PacketStream packets(bundle.packets());
+                    while (!packets.atEnd()) {
+                        processPacket(packets.next(), cliaddr);
+                    }
+                } else {
+                    processPacket(packet, cliaddr);
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "OSC Error: " << e.what() << std::endl;
             }
-        } else {
-            processMessage(OSCPP::Server::Message(packet));
         }
-    } catch (const std::exception& e) {
-        std::cerr << "OSC Error: " << e.what() << '\n';
     }
 }

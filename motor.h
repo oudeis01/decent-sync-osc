@@ -1,39 +1,21 @@
-#pragma once
-#include <unistd.h>
-#include <cstring>
-#include <iostream>
-#include <queue>
-#include <thread>
-#include <mutex>
-#include <condition_variable>
-#include "glob.h"
-// #if defined(PI_ZERO)
-    #include <pigpio.h>
-    #define EN_PIN 24
-    #define DIR_PIN 23
-    #define STEP_PIN 18
-// #endif
-class MotorController {
-public:
-    struct MotorCommand {
-        int steps;
-        float delay;
-        bool direction;
-        bool disable;
-    };
+#ifndef MOTOR_H
+#define MOTOR_H
 
-    MotorController() : running_(true) {}
-    void start();
-    void stop();
-    void queueCommand(const MotorCommand& cmd);
+#include <pigpio.h>
+
+class Motor {
+public:
+    Motor(int enPin, int dirPin, int stepPin);
+    ~Motor();
+    void enable();
+    void disable();
+    void rotate(int steps, int delayUs, bool direction);
 
 private:
-    void moveMotor(int steps, float delay, bool direction, bool disable);
-    void motorControlThread();
-
-    std::queue<MotorCommand> commandQueue_;
-    std::mutex queueMutex_;
-    std::condition_variable queueCV_;
-    std::thread motorThread_;
-    bool running_;
+    int enPin_;
+    int dirPin_;
+    int stepPin_;
+    bool isEnabled_;
 };
+
+#endif

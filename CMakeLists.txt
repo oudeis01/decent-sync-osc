@@ -1,43 +1,51 @@
-cmake_minimum_required(VERSION 3.14)
-project(DecentralizedSynchronization)
+cmake_minimum_required(VERSION 3.12)
+project(motor_control CXX)
 
-# Compiler options
+# Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_BUILD_TYPE Debug)
 
 # Include directories
 include_directories(
-    ${CMAKE_SOURCE_DIR}/oscpp/include  # OSCPP headers
-    ${CMAKE_SOURCE_DIR}               # Project headers
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/oscpp/include
 )
 
-# pigpio detection
-find_library(PIGPIO_LIB pigpio)
-if(PIGPIO_LIB)
-    message(STATUS "Found pigpio: ${PIGPIO_LIB}")
-    set(USE_PIGPIO TRUE)
-else()
-    message(WARNING "pigpio library not found - using mock mode")
-    set(USE_PIGPIO FALSE)
+# Add OSCPP as subproject
+add_subdirectory(oscpp)
+
+# Find pigpio library
+find_library(PIGPIO_LIBRARY pigpio)
+if(NOT PIGPIO_LIBRARY)
+    message(FATAL_ERROR "pigpio library not found!")
 endif()
 
-# Executable setup
-add_executable(DecentralizedSynchronization
+# Source files
+set(SOURCES
     main.cpp
     motor.cpp
     receiver.cpp
+    sender.cpp
 )
+
+# Add executable
+add_executable(motor_control ${SOURCES})
 
 # Link libraries
-target_link_libraries(DecentralizedSynchronization PRIVATE
+target_link_libraries(motor_control
+    ${PIGPIO_LIBRARY}
+    oscpp  # From the subdirectory
     pthread
+    rt
+    m
 )
 
-if(USE_PIGPIO)
-    target_link_libraries(DecentralizedSynchronization PRIVATE
-        ${PIGPIO_LIB}
-        rt  # Required for pigpio
-    )
-    target_compile_definitions(DecentralizedSynchronization PRIVATE PI_ZERO)
-endif()
+# Compiler flags
+target_compile_options(motor_control PRIVATE 
+    -Wall
+    -O2
+    -Wno-unused-parameter
+)
+
+# Installation (optional)
+install(TARGETS motor_control RUNTIME DESTINATION /usr/local/bin)
