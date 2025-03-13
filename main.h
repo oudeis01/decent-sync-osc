@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <atomic>
 #include <csignal>
+#include <iostream>
 
 #define EN_PIN 24
 #define DIR_PIN 23
