@@ -31,14 +31,17 @@ int main() {
                     std::cout << Color::cmdTag() << " Starting rotation - Steps: " << Color::value(cmd.steps)
                             << ", Delay: " << Color::value(cmd.delayUs) << "μs\n";
                     motor.rotate(cmd.steps, static_cast<int>(cmd.delayUs), cmd.direction);
+                    Sender::sendDone(cmd.senderIp, cmd.senderPort, cmd.index);
                     break;
                 case Command::ENABLE:
                     std::cout << Color::cmdTag() << " Enabling motor\n";
                     motor.enable();
+                    Sender::sendDone(cmd.senderIp, cmd.senderPort, cmd.index);
                     break;
                 case Command::DISABLE:
                     std::cout << Color::cmdTag() << " Disabling motor\n";
                     motor.disable();
+                    Sender::sendDone(cmd.senderIp, cmd.senderPort, cmd.index);
                     break;
                 case Command::INFO:
                     continue;  // Already handled in receiver
