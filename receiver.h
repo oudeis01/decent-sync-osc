@@ -27,12 +27,13 @@ public:
     ~Receiver();
     std::string getLocalIp() const;
     void start();
-    void stop();
-
+    void stop(bool wait_for_thread = true);
+    
 private:
     static int oscHandler(const char *path, const char *types, 
                          lo_arg **argv, int argc, lo_message msg, void *user_data);
-    
+
+    std::atomic<bool> running_{false};
     int port_;
     std::queue<Command>& commandQueue_;
     std::mutex& queueMutex_;

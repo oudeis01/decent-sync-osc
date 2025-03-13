@@ -58,9 +58,15 @@ void Receiver::start() {
               << Color::cmdTag() << "   /exit\n";
 }
 
-void Receiver::stop() {
-    lo_server_thread_stop(server_thread_);
-    lo_server_thread_free(server_thread_);
+void Receiver::stop(bool wait_for_thread) {
+    if (running_) {
+        running_ = false;
+        lo_server_thread_stop(server_thread_);
+        if (wait_for_thread) {
+            // Wait for server thread to finish
+            lo_server_thread_free(server_thread_);
+        }
+    }
 }
 
 int Receiver::oscHandler(const char *path, const char *types, 
