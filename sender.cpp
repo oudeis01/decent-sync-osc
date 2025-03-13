@@ -34,7 +34,7 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
     lo_message msg = lo_message_new();
 
     if (queue.empty()) {
-        lo_message_add_string(msg, "nocommandsinthequeue");
+        lo_message_add_string(msg, "no commands in the queue");
         lo_send_message(addr, "/info", msg);
     } else {
         std::queue<Command> q_copy = queue;
@@ -42,10 +42,9 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
             const Command& cmd = q_copy.front();
             switch (cmd.type) {
                 case Command::ROTATE:
-                    lo_message_add_int32(msg, cmd.index);
                     lo_message_add_string(msg, "rotate");
                     lo_message_add_int32(msg, cmd.steps);
-                    lo_message_add_int32(msg, cmd.delayUs);
+                    lo_message_add_float(msg, cmd.delayUs);  // Send as float
                     lo_message_add_int32(msg, cmd.direction);
                     break;
                 case Command::ENABLE:

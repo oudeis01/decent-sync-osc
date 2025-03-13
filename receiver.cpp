@@ -70,17 +70,32 @@ int Receiver::oscHandler(const char *path, const char *types,
 
     try {
         if (strcmp(path, "/rotate") == 0) {
-            if (argc != 3 || strcmp(types, "iii")) throw std::runtime_error("Invalid arguments");
+            // Allow numeric types for first two args, require int for direction
+            if (argc != 3 || 
+                !(types[0] == 'i' || types[0] == 'f') ||  // steps
+                !(types[1] == 'i' || types[1] == 'f') ||  // delay
+                types[2] != 'i') {                         // direction
+                throw std::runtime_error("Invalid arguments. Expected [number] [number] [int]");
+            }
+
             cmd.type = Command::ROTATE;
-            cmd.steps = argv[0]->i;
-            cmd.delayUs = argv[1]->i;
+            
+            // Parse steps (int)
+            if (types[0] == 'i') cmd.steps = argv[0]->i;
+            else cmd.steps = static_cast<int>(argv[0]->f);  // truncate float to int
+
+            // Parse delayUs (float)
+            if (types[1] == 'i') cmd.delayUs = static_cast<float>(argv[1]->i);
+            else cmd.delayUs = argv[1]->f;
+
+            // Parse direction (bool)
             cmd.direction = argv[2]->i;
             cmd.index = ++receiver->commandIndex_;
 
             std::cout << "[CMD] ROTATE from " << cmd.senderIp 
-                      << " Steps: " << cmd.steps
-                      << " μDelay: " << cmd.delayUs 
-                      << " Dir: " << (cmd.direction ? "CW" : "CCW") << "\n";
+                    << " Steps: " << cmd.steps
+                    << " μDelay: " << cmd.delayUs 
+                    << " Dir: " << (cmd.direction ? "CW" : "CCW") << "\n";
         }
         else if (strcmp(path, "/enable") == 0) {
             cmd.type = Command::ENABLE;

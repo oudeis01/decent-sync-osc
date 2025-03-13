@@ -28,8 +28,8 @@ int main() {
             switch (cmd.type) {
                 case Command::ROTATE:
                     std::cout << "Starting rotation - Steps: " << cmd.steps
-                              << ", Delay: " << cmd.delayUs << "μs\n";
-                    motor.rotate(cmd.steps, cmd.delayUs, cmd.direction);
+                            << ", Delay: " << cmd.delayUs << "μs\n";
+                    motor.rotate(cmd.steps, static_cast<int>(cmd.delayUs), cmd.direction);
                     break;
                 case Command::ENABLE:
                     std::cout << "Enabling motor\n";

@@ -16,7 +16,7 @@ struct Command {
     int senderPort;
     enum Type { ROTATE, ENABLE, DISABLE, INFO } type;
     int steps;
-    int delayUs;
+    float delayUs; // Changed to float
     bool direction;
 };
 
