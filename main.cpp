@@ -1,4 +1,5 @@
 #include "main.h"
+#include "colorPalette.h"
 
 int main() {
     if (gpioInitialise() < 0) return 1;
@@ -20,40 +21,33 @@ int main() {
         cmd_queue.pop();
         lock.unlock();
 
-        std::cout << "\nExecuting command #" << cmd.index 
-                  << " from " << cmd.senderIp 
-                  << ":" << cmd.senderPort << "\n";
+        std::cout << "\n" << Color::cmdTag() << " Executing command #" << Color::value(cmd.index) 
+                  << " from " << Color::client(cmd.senderIp) 
+                  << ":" << Color::value(cmd.senderPort) << "\n";
 
         try {
             switch (cmd.type) {
                 case Command::ROTATE:
-                    std::cout << "Starting rotation - Steps: " << cmd.steps
-                            << ", Delay: " << cmd.delayUs << "μs\n";
+                    std::cout << Color::cmdTag() << " Starting rotation - Steps: " << Color::value(cmd.steps)
+                            << ", Delay: " << Color::value(cmd.delayUs) << "μs\n";
                     motor.rotate(cmd.steps, static_cast<int>(cmd.delayUs), cmd.direction);
                     break;
                 case Command::ENABLE:
-                    std::cout << "Enabling motor\n";
+                    std::cout << Color::cmdTag() << " Enabling motor\n";
                     motor.enable();
                     break;
                 case Command::DISABLE:
-                    std::cout << "Disabling motor\n";
+                    std::cout << Color::cmdTag() << " Disabling motor\n";
                     motor.disable();
                     break;
                 case Command::INFO:
                     continue;  // Already handled in receiver
             }
+        } catch (const std::exception& e) {
+            std::cerr << Color::errorTag() << " Error executing command: " << e.what() << "\n";
         }
-        catch (const std::exception& e) {
-            std::cerr << "Error executing command: " << e.what() << "\n";
-        }
-
-        Sender sender;
-        sender.sendDone(cmd.senderIp, 12345, cmd.index);
-        std::cout << "Completed command #" << cmd.index << " for "
-          << cmd.senderIp << ":12345\n";
     }
 
-    receiver.stop();
     gpioTerminate();
     return 0;
 }
