@@ -45,6 +45,12 @@ int main() {
                     break;
                 case Command::INFO:
                     continue;  // Already handled in receiver
+                case Command::EXIT:
+                    std::cout << Color::successTag() << " Graceful shutdown initiated\n";
+                    receiver.stop();
+                    motor.disable();
+                    gpioTerminate();
+                    return 0;
             }
         } catch (const std::exception& e) {
             std::cerr << Color::errorTag() << " Error executing command: " << e.what() << "\n";

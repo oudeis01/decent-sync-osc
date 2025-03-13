@@ -54,7 +54,8 @@ void Receiver::start() {
               << Color::cmdTag() << "   /rotate <steps> <delay_us> <direction(0|1)>\n"
               << Color::cmdTag() << "   /enable\n"
               << Color::cmdTag() << "   /disable\n"
-              << Color::cmdTag() << "   /info\n";
+              << Color::cmdTag() << "   /info\n"
+              << Color::cmdTag() << "   /exit\n";
 }
 
 void Receiver::stop() {
@@ -115,6 +116,19 @@ int Receiver::oscHandler(const char *path, const char *types,
             Sender sender;
             sender.sendInfo(cmd.senderIp, 12345, receiver->commandQueue_);
             std::cout << Color::rcvTag() << " INFO from " << Color::client(cmd.senderIp);
+            return 0;
+        }
+        else if (strcmp(path, "/exit") == 0) {
+            cmd.type = Command::EXIT;
+            cmd.index = ++receiver->commandIndex_;
+            std::cout << Color::cmdTag() << " SHUTDOWN requested by " 
+                    << Color::client(cmd.senderIp) << "\n";
+            
+            {
+                std::lock_guard<std::mutex> lock(receiver->queueMutex_);
+                receiver->commandQueue_.push(cmd);
+                receiver->cv_.notify_one();
+            }
             return 0;
         }
         else {

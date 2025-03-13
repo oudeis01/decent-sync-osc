@@ -14,7 +14,7 @@ struct Command {
     int index;
     std::string senderIp;
     int senderPort;
-    enum Type { ROTATE, ENABLE, DISABLE, INFO } type;
+    enum Type { ROTATE, ENABLE, DISABLE, INFO, EXIT} type;
     int steps;
     float delayUs; // Changed to float
     bool direction;
