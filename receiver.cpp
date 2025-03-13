@@ -1,5 +1,6 @@
 #include "receiver.h"
 #include "sender.h"
+#include "colorPalette.h"
 #include <ifaddrs.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -47,11 +48,13 @@ std::string Receiver::getLocalIp() const {
 
 void Receiver::start() {
     lo_server_thread_start(server_thread_);
-    std::cout << "OSC Server started\n"
-              << "Listening on: " << getLocalIp() << ":" << port_ << "\n"
-              << "Supported commands:\n"
-              << "  /rotate <steps> <delay_us> <direction(0|1)>\n"
-              << "  /enable\n  /disable\n  /info\n";
+    std::cout << Color::successTag() << " OSC Server started\n"
+              << Color::cmdTag() << " Listening on: " << Color::value(getLocalIp()) << ":" << Color::value(port_) << "\n"
+              << Color::cmdTag() << " Supported commands:\n"
+              << Color::cmdTag() << "   /rotate <steps> <delay_us> <direction(0|1)>\n"
+              << Color::cmdTag() << "   /enable\n"
+              << Color::cmdTag() << "   /disable\n"
+              << Color::cmdTag() << "   /info\n";
 }
 
 void Receiver::stop() {
@@ -92,26 +95,26 @@ int Receiver::oscHandler(const char *path, const char *types,
             cmd.direction = argv[2]->i;
             cmd.index = ++receiver->commandIndex_;
 
-            std::cout << "[CMD] ROTATE from " << cmd.senderIp 
-                    << " Steps: " << cmd.steps
-                    << " μDelay: " << cmd.delayUs 
-                    << " Dir: " << (cmd.direction ? "CW" : "CCW") << "\n";
+            std::cout << Color::cmdTag() << " ROTATE from " << Color::client(cmd.senderIp) 
+                    << " Steps: " << Color::value(cmd.steps)
+                    << " μDelay: " << Color::value(cmd.delayUs) 
+                    << " Dir: " << Color::value(cmd.direction ? "CW" : "CCW") << "\n";
         }
         else if (strcmp(path, "/enable") == 0) {
             cmd.type = Command::ENABLE;
             cmd.index = ++receiver->commandIndex_;
-            std::cout << "[CMD] ENABLE from " << cmd.senderIp << "\n";
+            std::cout << Color::cmdTag() << " ENABLE from " << Color::client(cmd.senderIp) << "\n";
         }
         else if (strcmp(path, "/disable") == 0) {
             cmd.type = Command::DISABLE;
             cmd.index = ++receiver->commandIndex_;
-            std::cout << "[CMD] DISABLE from " << cmd.senderIp << "\n";
+            std::cout << Color::cmdTag() << " DISABLE from " << Color::client(cmd.senderIp) << "\n";
         }
         else if (strcmp(path, "/info") == 0) {
             cmd.type = Command::INFO;
             Sender sender;
             sender.sendInfo(cmd.senderIp, 12345, receiver->commandQueue_);
-            std::cout << "[CMD] INFO from " << cmd.senderIp << "\n";
+            std::cout << Color::cmdTag() << " INFO from " << Color::client(cmd.senderIp) << "\n";
             return 0;
         }
         else {
@@ -128,8 +131,8 @@ int Receiver::oscHandler(const char *path, const char *types,
         sender.sendAck(cmd.senderIp, 12345, cmd.index);
     }
     catch (const std::exception& e) {
-        std::cerr << "[ERROR] From " << cmd.senderIp 
-                  << ":" << cmd.senderPort << " - " << e.what() << "\n";
+        std::cerr << Color::errorTag() << " From " << Color::client(cmd.senderIp) 
+                  << ":" << Color::value(cmd.senderPort) << " - " << e.what() << "\n";
     }
     return 0;
 }
