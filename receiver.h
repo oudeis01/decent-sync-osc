@@ -1,24 +1,14 @@
 #ifndef RECEIVER_H
 #define RECEIVER_H
 
+#include <lo/lo.h>
 #include <queue>
 #include <mutex>
 #include <atomic>
 #include <string>
-#include <netinet/in.h>
 #include <condition_variable>
-#include <thread> 
-#include <iostream>
-#include <ifaddrs.h>
-#include <sys/socket.h>
+#include <thread>
 #include <unordered_set>
-
-// Forward declaration
-namespace OSCPP {
-namespace Server {
-    class Packet;
-}
-}
 
 struct Command {
     int index;
@@ -30,7 +20,6 @@ struct Command {
     bool direction;
 };
 
-
 class Receiver {
 public:
     Receiver(int port, std::queue<Command>& queue, std::mutex& mutex,
@@ -41,18 +30,16 @@ public:
     void stop();
 
 private:
-    void run();
-    void processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& cliaddr);
-    void trackConnection(const std::string& ip, int port);
-
+    static int oscHandler(const char *path, const char *types, 
+                         lo_arg **argv, int argc, lo_message msg, void *user_data);
+    
     int port_;
-    int sockfd_;
     std::queue<Command>& commandQueue_;
     std::mutex& queueMutex_;
     std::atomic<int>& commandIndex_;
     std::condition_variable& cv_;
-    bool running_;
-    std::thread thread_;
+    lo_server_thread server_thread_;
     std::unordered_set<std::string> connected_clients_;
 };
+
 #endif

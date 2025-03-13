@@ -1,49 +1,37 @@
 #include "receiver.h"
 #include "sender.h"
-#include <oscpp/server.hpp>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <cstring>
-#include <thread>
-#include <iostream>
 #include <ifaddrs.h>
-#include <sys/socket.h>
-#include <sstream>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <iostream>
+#include <cstring>
 
 Receiver::Receiver(int port, std::queue<Command>& queue, std::mutex& mutex,
                    std::atomic<int>& cmdIndex, std::condition_variable& cv)
     : port_(port), commandQueue_(queue), queueMutex_(mutex),
-      commandIndex_(cmdIndex), cv_(cv), running_(false) {
-    sockfd_ = socket(AF_INET, SOCK_DGRAM, 0);
-    sockaddr_in servaddr{};
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = INADDR_ANY;
-    servaddr.sin_port = htons(port_);
-    bind(sockfd_, (sockaddr*)&servaddr, sizeof(servaddr));
+      commandIndex_(cmdIndex), cv_(cv) {
+    server_thread_ = lo_server_thread_new(std::to_string(port_).c_str(), nullptr);
+    lo_server_thread_add_method(server_thread_, nullptr, nullptr, 
+                               &Receiver::oscHandler, this);
 }
 
 Receiver::~Receiver() {
     stop();
-    close(sockfd_);
 }
+
 std::string Receiver::getLocalIp() const {
     std::string local_ip = "0.0.0.0";
     struct ifaddrs *ifaddr, *ifa;
     
-    if (getifaddrs(&ifaddr) == -1) {
-        return local_ip;
-    }
+    if (getifaddrs(&ifaddr) == -1) return local_ip;
 
     for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
-        if (ifa->ifa_addr == nullptr) continue;
-        
-        // IPv4 only
+        if (!ifa->ifa_addr) continue;
         if (ifa->ifa_addr->sa_family == AF_INET) {
-            struct sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(ifa->ifa_addr);
+            auto* addr = reinterpret_cast<sockaddr_in*>(ifa->ifa_addr);
             char ip[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &addr->sin_addr, ip, INET_ADDRSTRLEN);
             
-            // Skip loopback and virtual interfaces
             if (strcmp(ifa->ifa_name, "lo") != 0 && 
                 strncmp(ifa->ifa_name, "docker", 6) != 0 &&
                 strncmp(ifa->ifa_name, "br-", 3) != 0 &&
@@ -53,120 +41,80 @@ std::string Receiver::getLocalIp() const {
             }
         }
     }
-
     freeifaddrs(ifaddr);
     return local_ip;
-
 }
 
 void Receiver::start() {
-    running_ = true;
-    thread_ = std::thread(&Receiver::run, this);
-    
-    std::cout << "OSC Server started\n";
-    std::cout << "Listening on: " << getLocalIp() << ":" << port_ << "\n";
-    std::cout << "Supported commands:\n";
-    std::cout << "  /rotate <steps> <delay_us> <direction(0|1)>\n";
-    std::cout << "  /enable\n  /disable\n  /info\n";
+    lo_server_thread_start(server_thread_);
+    std::cout << "OSC Server started\n"
+              << "Listening on: " << getLocalIp() << ":" << port_ << "\n"
+              << "Supported commands:\n"
+              << "  /rotate <steps> <delay_us> <direction(0|1)>\n"
+              << "  /enable\n  /disable\n  /info\n";
 }
+
 void Receiver::stop() {
-    running_ = false;
-    if (thread_.joinable()) thread_.join();
-}
-void Receiver::trackConnection(const std::string& ip, int port) {
-    if (connected_clients_.find(ip) == connected_clients_.end()) {
-        connected_clients_.insert(ip);
-        Sender::print_connection_info(ip, port);  // Show actual incoming port
-    }
+    lo_server_thread_stop(server_thread_);
+    lo_server_thread_free(server_thread_);
 }
 
-void Receiver::processPacket(const OSCPP::Server::Packet& packet, sockaddr_in& cliaddr) {
-    if (packet.isMessage()) {
-        OSCPP::Server::Message msg(packet);
-        std::string address = msg.address();
+int Receiver::oscHandler(const char *path, const char *types, 
+                        lo_arg **argv, int argc, lo_message msg, void *user_data) {
+    Receiver* receiver = static_cast<Receiver*>(user_data);
+    Command cmd{};
+    
+    lo_address addr = lo_message_get_source(msg);
+    cmd.senderIp = lo_address_get_hostname(addr);
+    cmd.senderPort = std::stoi(lo_address_get_port(addr));
 
-        Command cmd{};
-        cmd.senderIp = inet_ntoa(cliaddr.sin_addr);
-        cmd.senderPort = ntohs(cliaddr.sin_port);
-        trackConnection(cmd.senderIp, cmd.senderPort);
+    try {
+        if (strcmp(path, "/rotate") == 0) {
+            if (argc != 3 || strcmp(types, "iii")) throw std::runtime_error("Invalid arguments");
+            cmd.type = Command::ROTATE;
+            cmd.steps = argv[0]->i;
+            cmd.delayUs = argv[1]->i;
+            cmd.direction = argv[2]->i;
+            cmd.index = ++receiver->commandIndex_;
 
-        try {
-            if (address == "/rotate") {
-                OSCPP::Server::ArgStream args = msg.args();
-                cmd.type = Command::ROTATE;
-                cmd.steps = args.int32();
-                cmd.delayUs = args.int32();
-                cmd.direction = args.int32();
-                cmd.index = ++commandIndex_;
-
-                std::cout << "[CMD] ROTATE from " << cmd.senderIp 
-                          << " Steps: " << cmd.steps
-                          << " μDelay: " << cmd.delayUs 
-                          << " Dir: " << (cmd.direction ? "CW" : "CCW") << "\n";
-
-                std::lock_guard<std::mutex> lock(queueMutex_);
-                commandQueue_.push(cmd);
-                cv_.notify_one();
-            }
-            else if (address == "/enable") {
-                cmd.type = Command::ENABLE;
-                cmd.index = ++commandIndex_;
-                std::cout << "[CMD] ENABLE from " << cmd.senderIp;
-                std::lock_guard<std::mutex> lock(queueMutex_);
-                commandQueue_.push(cmd);
-                cv_.notify_one();
-            }
-            else if (address == "/disable") {
-                cmd.type = Command::DISABLE;
-                cmd.index = ++commandIndex_;
-                std::cout << "[CMD] DISABLE from " << cmd.senderIp;
-                std::lock_guard<std::mutex> lock(queueMutex_);
-                commandQueue_.push(cmd);
-                cv_.notify_one();
-            }
-            else if (address == "/info") {
-                cmd.type = Command::INFO;
-                Sender sender;
-                sender.sendInfo(cmd.senderIp, 12345, commandQueue_);
-                std::cout << "[CMD] INFO from " << cmd.senderIp;
-                std::lock_guard<std::mutex> lock(queueMutex_);
-                commandQueue_.push(cmd);
-                cv_.notify_one();
-                return;
-            }
-
+            std::cout << "[CMD] ROTATE from " << cmd.senderIp 
+                      << " Steps: " << cmd.steps
+                      << " μDelay: " << cmd.delayUs 
+                      << " Dir: " << (cmd.direction ? "CW" : "CCW") << "\n";
+        }
+        else if (strcmp(path, "/enable") == 0) {
+            cmd.type = Command::ENABLE;
+            cmd.index = ++receiver->commandIndex_;
+            std::cout << "[CMD] ENABLE from " << cmd.senderIp << "\n";
+        }
+        else if (strcmp(path, "/disable") == 0) {
+            cmd.type = Command::DISABLE;
+            cmd.index = ++receiver->commandIndex_;
+            std::cout << "[CMD] DISABLE from " << cmd.senderIp << "\n";
+        }
+        else if (strcmp(path, "/info") == 0) {
+            cmd.type = Command::INFO;
             Sender sender;
-            sender.sendAck(cmd.senderIp, 12345, cmd.index);
+            sender.sendInfo(cmd.senderIp, 12345, receiver->commandQueue_);
+            std::cout << "[CMD] INFO from " << cmd.senderIp << "\n";
+            return 0;
         }
-        catch (const std::exception& e) {
-            std::cerr << "[ERROR] From " << cmd.senderIp 
-                      << ":" << cmd.senderPort << " - " << e.what() << "\n";
+        else {
+            return 1;
         }
-    }
-}
 
-void Receiver::run() {
-    sockaddr_in cliaddr{};
-    socklen_t len = sizeof(cliaddr);
-    char buffer[8192];
-
-    while (running_) {
-        ssize_t n = recvfrom(sockfd_, buffer, sizeof(buffer), 0, (sockaddr*)&cliaddr, &len);
-        if (n > 0) {
-            try {
-                OSCPP::Server::Packet packet(buffer, n);
-                if (packet.isBundle()) {
-                    OSCPP::Server::Bundle bundle(packet);
-                    OSCPP::Server::PacketStream packets(bundle.packets());
-                    while (!packets.atEnd()) {
-                        processPacket(packets.next(), cliaddr);
-                    }
-                } else {
-                    processPacket(packet, cliaddr);
-                }
-            } catch (const std::exception& e) {
-                std::cerr << "OSC Error: " << e.what() << std::endl;
-            }
+        {
+            std::lock_guard<std::mutex> lock(receiver->queueMutex_);
+            receiver->commandQueue_.push(cmd);
+            receiver->cv_.notify_one();
         }
+
+        Sender sender;
+        sender.sendAck(cmd.senderIp, 12345, cmd.index);
     }
+    catch (const std::exception& e) {
+        std::cerr << "[ERROR] From " << cmd.senderIp 
+                  << ":" << cmd.senderPort << " - " << e.what() << "\n";
+    }
+    return 0;
 }

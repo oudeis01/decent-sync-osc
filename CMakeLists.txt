@@ -4,17 +4,9 @@ project(motor_control CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Disable strict warnings for OSCPP
-add_compile_options(-Wno-error=deprecated-copy -Wno-deprecated-copy)
-
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/oscpp/include
-)
-
-# Disable OSCPP tests
-set(OSCPP_BUILD_TESTS OFF CACHE BOOL "Disable tests")
-add_subdirectory(oscpp EXCLUDE_FROM_ALL)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBLO REQUIRED liblo)
+include_directories(${LIBLO_INCLUDE_DIRS})
 
 find_library(PIGPIO_LIBRARY pigpio)
 if(NOT PIGPIO_LIBRARY)
@@ -32,6 +24,7 @@ add_executable(motor_control ${SOURCES})
 
 target_link_libraries(motor_control
     ${PIGPIO_LIBRARY}
+    ${LIBLO_LIBRARIES}
     pthread
     rt
     m

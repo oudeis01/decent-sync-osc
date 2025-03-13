@@ -1,6 +1,7 @@
 #ifndef SENDER_H
 #define SENDER_H
 
+#include <lo/lo.h>
 #include <string>
 #include <queue>
 #include "receiver.h"
