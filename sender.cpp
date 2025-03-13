@@ -3,6 +3,8 @@
 #include <lo/lo.h>
 #include <iostream>
 
+constexpr int RESPONSE_PORT = 12345;
+
 void Sender::sendAck(const std::string& ip, int port, int index) {
     lo_address addr = lo_address_new(ip.c_str(), std::to_string(port).c_str());
     lo_message msg = lo_message_new();
