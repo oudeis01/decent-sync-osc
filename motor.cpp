@@ -13,16 +13,19 @@ Motor::Motor(int enPin, int dirPin, int stepPin)
 Motor::~Motor() { disable(); }
 
 void Motor::enable() {
-    gpioWrite(enPin_, 0); // Active LOW enable
+    std::lock_guard<std::mutex> lock(motor_mutex_);
+    gpioWrite(enPin_, 0);
     isEnabled_ = true;
 }
 
 void Motor::disable() {
+    std::lock_guard<std::mutex> lock(motor_mutex_);
     gpioWrite(enPin_, 1);
     isEnabled_ = false;
 }
 
 void Motor::rotate(int steps, int delayUs, bool direction) {
+    std::lock_guard<std::mutex> lock(motor_mutex_);
     if (!isEnabled_) return;
     
     gpioWrite(dirPin_, direction ? 1 : 0);

@@ -2,6 +2,7 @@
 #define MOTOR_H
 
 #include <pigpio.h>
+#include <mutex>
 
 class Motor {
 public:
@@ -16,6 +17,7 @@ private:
     int dirPin_;
     int stepPin_;
     bool isEnabled_;
+    std::mutex motor_mutex_;
 };
 
 #endif

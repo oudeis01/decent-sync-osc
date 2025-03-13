@@ -1,3 +1,6 @@
+#ifndef MAIN_H
+#define MAIN_H
+
 #include "motor.h"
 #include "receiver.h"
 #include "sender.h"
@@ -6,17 +9,15 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
-#include <iostream>
 #include <csignal>
-#include <atomic>
 
 #define EN_PIN 24
 #define DIR_PIN 23
 #define STEP_PIN 18
 
-
 extern std::atomic<bool> shutdown_flag;
+extern std::atomic<bool> worker_running;
 
 void signalHandler(int signal);
 
-std::atomic<bool> worker_running(true);
+#endif
