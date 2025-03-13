@@ -55,6 +55,10 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
                     lo_message_add_int32(msg, cmd.index);
                     lo_message_add_string(msg, "info");
                     break;
+                case Command::EXIT:
+                    lo_message_add_int32(msg, cmd.index);
+                    lo_message_add_string(msg, "exit");
+                    break;
             }
             q_copy.pop();
         }
