@@ -1,16 +1,10 @@
 #include "sender.h"
+#include "colorPalette.h"
+#include <lo/lo.h>
 #include <iostream>
 
-constexpr int RESPONSE_PORT = 12345;
-
-void Sender::print_connection_info(const std::string& ip, int port) {
-    std::cout << "\n[NEW CLIENT]\n"
-              << "  Address: " << ip << ":" << port << "\n"
-              << "  First connection established\n\n";
-}
-
 void Sender::sendAck(const std::string& ip, int port, int index) {
-    lo_address addr = lo_address_new(ip.c_str(), std::to_string(RESPONSE_PORT).c_str());
+    lo_address addr = lo_address_new(ip.c_str(), std::to_string(port).c_str());
     lo_message msg = lo_message_new();
     lo_message_add_int32(msg, index);
     lo_send_message(addr, "/ack", msg);
@@ -25,8 +19,8 @@ void Sender::sendDone(const std::string& ip, int port, int index) {
     lo_send_message(addr, "/done", msg);
     lo_message_free(msg);
     lo_address_free(addr);
-    std::cout << "Completed command #" << index << " for "
-              << ip << ":" << port << "\n";
+    std::cout << Color::successTag() << " Completed command #" << Color::value(index) 
+              << " for " << Color::client(ip) << ":" << Color::value(port) << "\n";
 }
 
 void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>& queue) {
@@ -56,13 +50,14 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
                     lo_message_add_string(msg, "disable");
                     break;
                 case Command::INFO:
+                    lo_message_add_int32(msg, cmd.index);
+                    lo_message_add_string(msg, "info");
                     break;
             }
             q_copy.pop();
         }
         lo_send_message(addr, "/info", msg);
     }
-    
     lo_message_free(msg);
     lo_address_free(addr);
 }
