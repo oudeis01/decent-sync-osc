@@ -15,8 +15,8 @@ void commandWorker(Motor& motor,
         cv.wait(lock, [&]{ 
             return !cmd_queue.empty() || !worker_running || shutdown_flag; 
         });
-        
-        if (!worker_running || shutdown_flat) break;
+
+        if (!worker_running || shutdown_flag) break;
         
         Command cmd = cmd_queue.front();
         cmd_queue.pop();
