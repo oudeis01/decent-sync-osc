@@ -28,18 +28,18 @@ int main() {
         try {
             switch (cmd.type) {
                 case Command::ROTATE:
-                    std::cout << Color::cmdTag() << " Starting rotation - Steps: " << Color::value(cmd.steps)
+                    std::cout << Color::runTag() << " Starting rotation - Steps: " << Color::value(cmd.steps)
                             << ", Delay: " << Color::value(cmd.delayUs) << "μs\n";
                     motor.rotate(cmd.steps, static_cast<int>(cmd.delayUs), cmd.direction);
                     Sender::sendDone(cmd.senderIp, cmd.senderPort, cmd.index);
                     break;
                 case Command::ENABLE:
-                    std::cout << Color::cmdTag() << " Enabling motor\n";
+                    std::cout << Color::runTag() << " Enabling motor\n";
                     motor.enable();
                     Sender::sendDone(cmd.senderIp, cmd.senderPort, cmd.index);
                     break;
                 case Command::DISABLE:
-                    std::cout << Color::cmdTag() << " Disabling motor\n";
+                    std::cout << Color::runTag() << " Disabling motor\n";
                     motor.disable();
                     Sender::sendDone(cmd.senderIp, cmd.senderPort, cmd.index);
                     break;

@@ -95,7 +95,7 @@ int Receiver::oscHandler(const char *path, const char *types,
             cmd.direction = argv[2]->i;
             cmd.index = ++receiver->commandIndex_;
 
-            std::cout << Color::cmdTag() << " ROTATE from " << Color::client(cmd.senderIp) 
+            std::cout << Color::rcvTag() << " ROTATE from " << Color::client(cmd.senderIp) 
                     << " Steps: " << Color::value(cmd.steps)
                     << " μDelay: " << Color::value(cmd.delayUs) 
                     << " Dir: " << Color::value(cmd.direction ? "CW" : "CCW") << "\n";
@@ -103,18 +103,18 @@ int Receiver::oscHandler(const char *path, const char *types,
         else if (strcmp(path, "/enable") == 0) {
             cmd.type = Command::ENABLE;
             cmd.index = ++receiver->commandIndex_;
-            std::cout << Color::cmdTag() << " ENABLE from " << Color::client(cmd.senderIp) << "\n";
+            std::cout << Color::rcvTag() << " ENABLE from " << Color::client(cmd.senderIp) << "\n";
         }
         else if (strcmp(path, "/disable") == 0) {
             cmd.type = Command::DISABLE;
             cmd.index = ++receiver->commandIndex_;
-            std::cout << Color::cmdTag() << " DISABLE from " << Color::client(cmd.senderIp) << "\n";
+            std::cout << Color::rcvTag() << " DISABLE from " << Color::client(cmd.senderIp) << "\n";
         }
         else if (strcmp(path, "/info") == 0) {
             cmd.type = Command::INFO;
             Sender sender;
             sender.sendInfo(cmd.senderIp, 12345, receiver->commandQueue_);
-            std::cout << Color::cmdTag() << " INFO from " << Color::client(cmd.senderIp) << "\n";
+            std::cout << Color::rcvTag() << " INFO from " << Color::client(cmd.senderIp) << "\n";
             return 0;
         }
         else {
