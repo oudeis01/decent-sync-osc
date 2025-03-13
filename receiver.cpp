@@ -66,6 +66,7 @@ void Receiver::stop(bool wait_for_thread) {
         }
     }
 }
+
 int Receiver::oscHandler(const char *path, const char *types, 
                         lo_arg **argv, int argc, lo_message msg, void *user_data) {
     Receiver* receiver = static_cast<Receiver*>(user_data);

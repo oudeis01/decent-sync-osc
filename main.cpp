@@ -10,11 +10,13 @@ void commandWorker(Motor& motor,
                   std::queue<Command>& cmd_queue,
                   std::mutex& queue_mutex,
                   std::condition_variable& cv) {
-    while (worker_running) {
+    while (worker_running && !shutdown_flag) {
         std::unique_lock<std::mutex> lock(queue_mutex);
-        cv.wait(lock, [&]{ return !cmd_queue.empty() || !worker_running; });
+        cv.wait(lock, [&]{ 
+            return !cmd_queue.empty() || !worker_running || shutdown_flag; 
+        });
         
-        if (!worker_running) break;
+        if (!worker_running || shutdown_flat) break;
         
         Command cmd = cmd_queue.front();
         cmd_queue.pop();
@@ -40,6 +42,8 @@ void commandWorker(Motor& motor,
                     Sender::sendDone(cmd.senderIp, 12345, cmd.index);
                     break;
                 case Command::EXIT:
+                    std::cout << Color::successTag() << " Graceful shutdown initiated via OSC\n";
+                    shutdown_flag.store(true);  // Add this line
                     worker_running = false;
                     break;
                 case Command::INFO:
@@ -87,10 +91,14 @@ int main() {
 
     // Cleanup sequence
     worker_running = false;
+    shutdown_flag = true;
     cv.notify_one();
-    worker.join();
-    
-    receiver.stop();
+
+    if (worker.joinable()) {
+        worker.join();
+    }
+
+    receiver.stop(true);  // Ensure waiting for server thread
     motor.disable();
     gpioTerminate();
 
