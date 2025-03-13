@@ -81,9 +81,6 @@ int main() {
             std::unique_lock<std::mutex> lock(queue_mutex);
             cv.wait(lock, [&cmd_queue]{ return !cmd_queue.empty(); });
 
-            Command cmd = cmd_queue.front();
-            cmd_queue.pop();
-            lock.unlock();
 
             std::cout << "\n" << Color::cmdTag() << " Executing command #" << Color::value(cmd.index) 
                     << " from " << Color::client(cmd.senderIp) 
