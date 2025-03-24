@@ -29,22 +29,22 @@ public:
     // Predefined styled elements
     static std::string cmdTag() { 
         static const std::string boldYellow = std::string(BOLD) + YELLOW;
-        return style("[CMD]", boldYellow.c_str()); 
+        return style("[CMD ]", boldYellow.c_str()); 
     }
 
     static std::string rcvTag() { 
         static const std::string boldBlue = std::string(BOLD) + BLUE;
-        return style("[RCV]", boldBlue.c_str()); 
+        return style("[RCV ]", boldBlue.c_str()); 
     }
 
     static std::string runTag() { 
         static const std::string boldMagenta = std::string(BOLD) + MAGENTA;
-        return style("[RUN]", boldMagenta.c_str()); 
+        return style("[RUN ]", boldMagenta.c_str()); 
     }
     
     static std::string errorTag() { 
         static const std::string boldRed = std::string(BOLD) + RED;
-        return style("[ERROR]", boldRed.c_str()); 
+        return style("[ERRO]", boldRed.c_str()); 
     }
     
     static std::string successTag() { 
