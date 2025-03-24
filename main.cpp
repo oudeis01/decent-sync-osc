@@ -29,17 +29,17 @@ void commandWorker(Motor& motor,
                             << Color::value(cmd.steps) << ", Delay: " 
                             << Color::value(cmd.delayUs) << "μs\n";
                     motor.rotate(cmd.steps, static_cast<int>(cmd.delayUs), cmd.direction);
-                    Sender::sendDone(cmd.senderIp, 12345, cmd.index);
+                    Sender::sendDone(cmd.senderIp, 12345, cmd.index, "ROTATE");
                     break;
                 case Command::ENABLE:
                     std::cout << Color::runTag() << " Enabling motor\n";
                     motor.enable();
-                    Sender::sendDone(cmd.senderIp, 12345, cmd.index);
+                    Sender::sendDone(cmd.senderIp, 12345, cmd.index, "ENABLE");
                     break;
                 case Command::DISABLE:
                     std::cout << Color::runTag() << " Disabling motor\n";
                     motor.disable();
-                    Sender::sendDone(cmd.senderIp, 12345, cmd.index);
+                    Sender::sendDone(cmd.senderIp, 12345, cmd.index, "DISABLE");
                     break;
                 case Command::EXIT:
                     std::cout << Color::successTag() << " Graceful shutdown initiated via OSC\n";

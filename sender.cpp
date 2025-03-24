@@ -14,15 +14,15 @@ void Sender::sendAck(const std::string& ip, int port, int index) {
     lo_address_free(addr);
 }
 
-void Sender::sendDone(const std::string& ip, int port, int index) {
+void Sender::sendDone(const std::string& ip, int port, int index, std::string type_name) {
     lo_address addr = lo_address_new(ip.c_str(), std::to_string(port).c_str());
     lo_message msg = lo_message_new();
     lo_message_add_int32(msg, index);
     lo_send_message(addr, "/done", msg);
     lo_message_free(msg);
     lo_address_free(addr);
-    std::cout << Color::successTag() << " Completed command #" << Color::value(index) 
-              << " for " << Color::client(ip) << ":" << Color::value(port) << "\n";
+    std::cout << Color::successTag() << " Completed command #" <<
+    Color::value(index) <<  " " << type_name <<"\n";
 }
 
 void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>& queue) {
@@ -39,30 +39,18 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
             const Command& cmd = q_copy.front();
             switch (cmd.type) {
                 case Command::ROTATE:
-                    // lo_message_add_string(msg, "rotate");
-                    // lo_message_add_int32(msg, cmd.steps);
-                    // lo_message_add_float(msg, cmd.delayUs);  // Send as float
-                    // lo_message_add_int32(msg, cmd.direction);
                     qstr += "rotate " + std::to_string(cmd.steps) + ", " + std::to_string(cmd.delayUs) + ", " + std::to_string(cmd.direction) + "\n";
                     break;
                 case Command::ENABLE:
-                    // lo_message_add_int32(msg, cmd.index);
-                    // lo_message_add_string(msg, "enable");
                     qstr += "enable motor #" + std::to_string(cmd.index) + "\n";
                     break;
                 case Command::DISABLE:
-                    // lo_message_add_int32(msg, cmd.index);
-                    // lo_message_add_string(msg, "disable");
                     qstr += "disable motor #" + std::to_string(cmd.index) + "\n";
                     break;
                 case Command::INFO:
-                    // lo_message_add_int32(msg, cmd.index);
-                    // lo_message_add_string(msg, "info");
                     qstr += "get info for motor #" + std::to_string(cmd.index) + "\n";
                     break;
                 case Command::EXIT:
-                    // lo_message_add_int32(msg, cmd.index);
-                    // lo_message_add_string(msg, "exit");
                     qstr += "exit\n";
                     break;
             }
