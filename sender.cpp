@@ -43,7 +43,7 @@ void Sender::sendInfo(const std::string& ip, int port, const std::queue<Command>
                     // lo_message_add_int32(msg, cmd.steps);
                     // lo_message_add_float(msg, cmd.delayUs);  // Send as float
                     // lo_message_add_int32(msg, cmd.direction);
-                    qstr += "rotate " + std::to_string(cmd.steps) + " steps at " + std::to_string(cmd.delayUs) + " us delay, direction " + std::to_string(cmd.direction) + "\n";
+                    qstr += "rotate " + std::to_string(cmd.steps) + ", " + std::to_string(cmd.delayUs) + ", " + std::to_string(cmd.direction) + "\n";
                     break;
                 case Command::ENABLE:
                     // lo_message_add_int32(msg, cmd.index);
