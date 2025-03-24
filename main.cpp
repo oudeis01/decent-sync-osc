@@ -34,7 +34,7 @@ void commandWorker(Motor& motor,
                 case Command::ENABLE:
                     std::cout << Color::runTag() << " Enabling motor\n";
                     motor.enable();
-                    Sender::sendDone(cmd.senderIp, 12345, cmd.index, std::strin("ENABLE"));
+                    Sender::sendDone(cmd.senderIp, 12345, cmd.index, std::string("ENABLE"));
                     break;
                 case Command::DISABLE:
                     std::cout << Color::runTag() << " Disabling motor\n";
