@@ -12,9 +12,9 @@
 #include <csignal>
 #include <iostream>
 
-#define EN_PIN 24
-#define DIR_PIN 23
-#define STEP_PIN 18
+#define EN_PIN 21
+#define DIR_PIN 20
+#define STEP_PIN 16
 
 extern std::atomic<bool> shutdown_flag;
 extern std::atomic<bool> worker_running;
